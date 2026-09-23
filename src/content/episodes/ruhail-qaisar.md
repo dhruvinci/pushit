@@ -8,7 +8,6 @@ city: Bangalore
 venue: Phantom Pulse
 summary: Process, background, intention and audiences — Ruhail on the mind behind the sound.
 cover: DY6ZGH3v7av/00
-heroClip: DY6ZGH3v7av/00
 spotted: [ruhail-qaisar, phantom-pulse]
 instagram: [DY6ZGH3v7av]
 youtube:

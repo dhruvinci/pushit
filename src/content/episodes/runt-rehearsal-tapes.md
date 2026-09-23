@@ -8,7 +8,6 @@ city: Bangalore
 venue: The Raft
 summary: Runt rehearse four songs ahead of their show at The Raft, with Siddharth Nair on vocals.
 cover: /media/yt/7Hi5Xw4iXK0.jpg
-heroClip: DdY6RIfPONl/00
 spotted: [runt, raft, oaf-records, hoirong]
 instagram: [DdY6RIfPONl]
 lineup:

@@ -15,8 +15,9 @@ interface Video {
 interface Props {
   videos: Video[];
   label: string; // series code shown in the HUD, e.g. "RT"
+  compact?: boolean; // player only: no tape list, setlist or theatre (homepage)
 }
-const { videos, label } = Astro.props;
+const { videos, label, compact = false } = Astro.props;
 const first = videos[0];
 const data = videos.map((v) => ({
   id: v.id,
@@ -50,13 +51,18 @@ const data = videos.map((v) => ({
       <div class="tp__marks"></div>
     </div>
     <span class="tp__time">0:00 / {first.duration ? clock(first.duration) : '—'}</span>
-    <button class="tp__btn tp__theatre" type="button" aria-pressed="false" title="Theatre mode">Theatre</button>
-    <button class="tp__btn tp__fs" type="button" title="Fullscreen">⛶</button>
-    <a class="tp__btn tp__yt" href={`https://www.youtube.com/watch?v=${first.id}`} rel="noopener">YouTube ↗</a>
+    {!compact && <button class="tp__btn tp__theatre" type="button" aria-pressed="false" title="Theatre mode">Theatre</button>}
+    <a class="tp__btn tp__yt" href={`https://www.youtube.com/watch?v=${first.id}`} rel="noopener" aria-label="Watch on YouTube" title="Watch on YouTube">
+      <svg viewBox="0 0 24 17" aria-hidden="true"><rect width="24" height="17" rx="4" fill="currentColor"></rect><path d="M9.6 4.8v7.4l6.2-3.7z" fill="var(--bg-2)"></path></svg>
+    </a>
+    <button class="tp__btn tp__fs" type="button" aria-label="Fullscreen" title="Fullscreen">
+      <svg class="tp__fs-on" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 7V2h5M13 2h5v5M18 13v5h-5M7 18H2v-5" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
+      <svg class="tp__fs-off" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 2v5H2M18 7h-5V2M13 18v-5h5M2 13h5v5" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
+    </button>
   </div>
 
   {
-    videos.length > 1 && (
+    !compact && videos.length > 1 && (
       <ol class="tp__list" aria-label="Tapes">
         {videos.map((v, i) => (
           <li>
@@ -73,7 +79,7 @@ const data = videos.map((v) => ({
   }
 
   {
-    videos.map((v, i) =>
+    !compact && videos.map((v, i) =>
       v.chapters.length > 0 ? (
         <ol class="tp__chapters" data-for={i} hidden={i !== 0} aria-label={`Setlist — ${v.title}`}>
           {v.chapters.map((c) => (
@@ -131,7 +137,7 @@ const data = videos.map((v) => ({
     const track = $('.tp__track'), fill = $('.tp__fill'), buffer = $('.tp__buffer'), marks = $('.tp__marks');
     const time = $('.tp__time'), tc = $('.tp__tc'), chapterLabel = $('.tp__chapter');
     const ytLink = $<HTMLAnchorElement>('.tp__yt'), fsBtn = $<HTMLButtonElement>('.tp__fs');
-    const theatreBtn = $<HTMLButtonElement>('.tp__theatre');
+    const theatreBtn = root.querySelector<HTMLButtonElement>('.tp__theatre');
 
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const saveData = (navigator as any).connection?.saveData === true;
@@ -143,7 +149,6 @@ const data = videos.map((v) => ({
     root.classList.add('has-js');
     bar.hidden = false;
     hit.hidden = false;
-    if (!document.fullscreenEnabled) fsBtn.hidden = true;
 
     const drawMarks = () => {
       const v = videos[current];
@@ -322,15 +327,30 @@ const data = videos.map((v) => ({
       }),
     );
 
-    theatreBtn.addEventListener('click', () => {
+    theatreBtn?.addEventListener('click', () => {
       const on = !document.documentElement.classList.contains('is-theatre');
       document.documentElement.classList.toggle('is-theatre', on);
       theatreBtn.setAttribute('aria-pressed', String(on));
       screen.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
     });
-    fsBtn.addEventListener('click', () =>
-      document.fullscreenElement ? document.exitFullscreen() : screen.requestFullscreen(),
-    );
+    // Fullscreen takes the whole player (controls too). iPhone Safari has no element fullscreen,
+    // so there the player covers the viewport instead.
+    const native = document.fullscreenEnabled;
+    const setFs = (on: boolean) => {
+      root.classList.toggle('is-fs', on);
+      fsBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Fullscreen');
+      fsBtn.title = on ? 'Exit fullscreen' : 'Fullscreen';
+      if (!native) document.documentElement.classList.toggle('tp-locked', on);
+    };
+    fsBtn.addEventListener('click', () => {
+      const on = !root.classList.contains('is-fs');
+      if (native) on ? root.requestFullscreen() : document.exitFullscreen();
+      else setFs(on);
+    });
+    document.addEventListener('fullscreenchange', () => setFs(document.fullscreenElement === root));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !native && root.classList.contains('is-fs')) setFs(false);
+    });
 
     // A silent preview pauses when scrolled away; once someone is listening, it keeps going.
     new IntersectionObserver(
@@ -593,21 +613,44 @@ const data = videos.map((v) => ({
   .tp__chapters a.is-now { background: var(--red); border-color: var(--red); color: var(--bg); }
   .tp__chapters a.is-now .stamp { color: var(--bg); }
 
-  /* fullscreen: the frame (with HUD) fills the screen */
-  .tp__screen:fullscreen { aspect-ratio: auto; border: 0; }
-  .tp__screen:fullscreen .tp__frame {
+  /* fullscreen: screen fills everything above the control bar; the 16:9 crop stays centred */
+  .tp.is-fs {
+    display: flex;
+    flex-direction: column;
+    background: #000;
+  }
+  .tp.is-fs:not(:fullscreen) {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  }
+  .tp.is-fs .tp__screen { flex: 1; aspect-ratio: auto; border: 0; }
+  .tp.is-fs .tp__frame {
     inset: auto;
     left: 50%;
     top: 50%;
     translate: -50% -50%;
-    width: min(100vw, 177.78vh);
+    width: min(100%, calc((100dvh - var(--tp-bar) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 16 / 9));
     aspect-ratio: 16 / 9;
   }
-  .tp__screen:fullscreen .tp__poster { object-fit: contain; }
+  .tp.is-fs .tp__poster { object-fit: contain; }
+  .tp.is-fs .tp__bar { border: 0; }
+  .tp.is-fs .tp__list,
+  .tp.is-fs .tp__chapters { display: none; }
+  :global(html.tp-locked) { overflow: hidden; }
+  .tp__fs svg { width: 1rem; height: 1rem; }
+  .tp__fs-off,
+  .tp.is-fs .tp__fs-on { display: none; }
+  .tp.is-fs .tp__fs-off { display: block; }
+  .tp__yt { color: var(--dim); padding: 0 0.55rem; }
+  .tp__yt svg { width: 1.05rem; height: auto; }
+  .tp__yt:hover { color: var(--red); }
 
   @media (max-width: 40rem) {
     .tp__time { display: none; }
     .tp__theatre { display: none; }
+    .tp__yt { padding: 0 0.4rem; }
     .tp__btn { padding: 0 0.6rem; }
     .tp__hud { inset: 0.6rem 0.7rem auto; font-size: 0.65rem; }
   }

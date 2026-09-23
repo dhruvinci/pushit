@@ -3,21 +3,20 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import TapeLog from '../components/TapeLog.astro';
 import EpisodeCard from '../components/EpisodeCard.astro';
-import LoopVideo from '../components/LoopVideo.astro';
-import { getEpisodes, SERIES, stamp, runtime, ytThumb } from '../lib/episodes';
+import TapePlayer from '../components/TapePlayer.astro';
+import { getEpisodes, SERIES, stamp, ytThumb } from '../lib/episodes';
 import { SITE } from '../site';
-import { resolveClip } from '../lib/media.mjs';
 
 const episodes = await getEpisodes();
-const latest = episodes.find((ep) => ep.data.heroClip) ?? episodes[0];
-const heroShape = resolveClip(latest.data.heroClip!).orientation;
+// The newest tape with a YouTube video plays in the hero
+const latest = episodes.find((ep) => ep.data.youtube.length > 0) ?? episodes[0];
 const diaries = episodes.filter((ep) => ep.data.series === 'scenes' || ep.data.series === 'specials').slice(0, 3);
 const work = await getCollection('work');
 const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === 'band' || s.data.kind === 'artist');
 ---
 
 <Base>
-  <section class:list={['hero wrap', `hero--${heroShape}`]}>
+  <section class="hero wrap">
     <div class="hero__text">
       <p class="rec">Now showing · {latest.tape}</p>
       <p class="hero__stamp stamp">{stamp(latest.data.date)} — {SERIES[latest.data.series].label}</p>
@@ -30,7 +29,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
       </div>
     </div>
     <div class="hero__video">
-      <LoopVideo ref={latest.data.heroClip!} timecode={runtime(latest)} />
+      <TapePlayer videos={latest.data.youtube} label={SERIES[latest.data.series].code} compact />
     </div>
   </section>
 
@@ -127,9 +126,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
   .hero h1 { margin-bottom: 1.2rem; overflow-wrap: anywhere; }
   .hero__summary { color: var(--dim); max-width: 44ch; margin: 1rem 0 1.8rem; font-size: 0.9rem; }
   .hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
-  .hero__video { max-width: 26rem; justify-self: end; width: 100%; }
-  .hero--landscape { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
-  .hero--landscape .hero__video { max-width: none; }
+  .hero { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr); align-items: center; }
 
   .marquee {
     overflow: hidden;
@@ -209,7 +206,6 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
 
   @media (max-width: 52rem) {
     .hero { grid-template-columns: 1fr; }
-    .hero__video { justify-self: start; max-width: 22rem; }
     .diaries { grid-template-columns: 1fr; }
     .diaries > :global(:first-child) { grid-row: auto; }
     .work-strip .wrap { grid-template-columns: 1fr; }

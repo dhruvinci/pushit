@@ -8,7 +8,6 @@ city: Bangalore
 venue: Hoirong's jam room
 summary: "Six tracks from Hoirong's jam room: Intro, Bonda, Glass Jaw, XOX, कुता and a Beatles cover."
 cover: /media/yt/UJdQh0VzcxY.jpg
-heroClip: DXn00PVD-no/00
 spotted: [hoirong]
 instagram: [DXn00PVD-no, DXoCofaDgTF, DXtW2R6j8nF, DX6PE1-vWeZ]
 youtube:
