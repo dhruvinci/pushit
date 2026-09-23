@@ -1,6 +1,6 @@
 ---
 subject: Tribal Sacrament Vol. 1
-title: The audio went out and made it sound like a noise show
+title: Live at Fandom
 series: scenes
 date: 2026-02-07
 published: 2026-05-18

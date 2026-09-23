@@ -1,6 +1,6 @@
 ---
 subject: HRMCOREWRLD
-title: Scenes from यम लोक
+title: Live in Mumbai
 series: scenes
 date: 2026-08-23
 published: 2026-09-02

@@ -1,18 +1,18 @@
 ---
 subject: Oaf Big Gigs
-title: A very heavy Thursday night
+title: Live at The Humming Tree
 series: scenes
 date: 2026-08-13
 published: 2026-08-14
 city: Bangalore
 venue: The Humming Tree
-summary: Simple Man Radio, Therofo and Pacifist — all the way from Mumbai — on a Thursday night.
+summary: Simple Man Radio and Therofo, plus Pacifist all the way from Mumbai, on a Thursday night.
 cover: DcAm3lnD4dg/02
 spotted: [simple-man-radio, therofo, pacifist, the-humming-tree, oaf-records]
 instagram: [DcAm3lnD4dg]
 ---
 
-Scenes from a very heavy Thursday night at The Humming Tree — Oaf Big Gigs, featuring Simple Man Radio, Therofo and Pacifist, all the way from Mumbai.
+Scenes from a very heavy Thursday night at The Humming Tree: Oaf Big Gigs, with Simple Man Radio and Therofo, plus Pacifist all the way from Mumbai.
 
 ::clip DcAm3lnD4dg/00
 

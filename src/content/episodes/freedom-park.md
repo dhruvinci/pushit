@@ -1,6 +1,6 @@
 ---
 subject: Freedom Park
-title: We interrupt your regular programming
+title: On the ground at Freedom Park
 series: specials
 date: 2026-07-29
 published: 2026-07-29

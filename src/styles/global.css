@@ -58,6 +58,11 @@ body::after {
   100% { transform: translate(0, 0); }
 }
 
+/* `hidden` must win over any display rule */
+[hidden] {
+  display: none !important;
+}
+
 img,
 video {
   max-width: 100%;

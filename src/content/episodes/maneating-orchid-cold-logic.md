@@ -1,6 +1,6 @@
 ---
 subject: Maneating Orchid
-title: Making Cold Logic
+title: On the set of Cold Logic
 series: bts
 date: 2026-05-19
 published: 2026-05-19

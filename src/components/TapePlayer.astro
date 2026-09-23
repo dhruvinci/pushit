@@ -1,0 +1,614 @@
+---
+// The tape player: YouTube's own stream, our own skin.
+// Starts muted in the header like a camcorder feed; a tap turns the sound on. YouTube's chrome is
+// switched off (controls=0) and cropped out of frame, and everything you touch is ours — play,
+// sound, scrubbing with song markers, a tape list, theatre mode and fullscreen.
+// Without JS it's a poster that links to YouTube.
+import { ytThumb, clock, seconds } from '../lib/episodes';
+
+interface Video {
+  id: string;
+  title: string;
+  duration?: number;
+  chapters: { t: string; label: string }[];
+}
+interface Props {
+  videos: Video[];
+  label: string; // series code shown in the HUD, e.g. "RT"
+}
+const { videos, label } = Astro.props;
+const first = videos[0];
+const data = videos.map((v) => ({
+  id: v.id,
+  title: v.title,
+  duration: v.duration ?? 0,
+  chapters: v.chapters.map((c) => ({ t: seconds(c.t), label: c.label })),
+}));
+---
+
+<div class="tp" data-tape-player data-videos={JSON.stringify(data)}>
+  <div class="tp__screen">
+    <div class="tp__frame"><div class="tp__mount"></div></div>
+    <img class="tp__poster" src={ytThumb(first.id)} alt="" width="1280" height="720" />
+    <a class="tp__nojs" href={`https://www.youtube.com/watch?v=${first.id}`}>▶ Watch on YouTube</a>
+    <div class="tp__hud" aria-hidden="true">
+      <span class="tp__state"><i></i><b>{label}</b></span>
+      <span class="tp__chapter"></span>
+      <span class="tp__tc">{first.duration ? clock(first.duration) : ''}</span>
+    </div>
+    <button class="tp__hit" type="button" aria-label="Play" hidden></button>
+    <span class="tp__hint" hidden>Tap for sound</span>
+    <button class="tp__big" type="button" hidden><span>▶</span> Play the tape</button>
+  </div>
+
+  <div class="tp__bar" hidden>
+    <button class="tp__btn tp__play" type="button" aria-label="Pause">❚❚</button>
+    <button class="tp__btn tp__sound" type="button" aria-pressed="false">Sound off</button>
+    <div class="tp__track" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+      <div class="tp__buffer"></div>
+      <div class="tp__fill"></div>
+      <div class="tp__marks"></div>
+    </div>
+    <span class="tp__time">0:00 / {first.duration ? clock(first.duration) : '—'}</span>
+    <button class="tp__btn tp__theatre" type="button" aria-pressed="false" title="Theatre mode">Theatre</button>
+    <button class="tp__btn tp__fs" type="button" title="Fullscreen">⛶</button>
+    <a class="tp__btn tp__yt" href={`https://www.youtube.com/watch?v=${first.id}`} rel="noopener">YouTube ↗</a>
+  </div>
+
+  {
+    videos.length > 1 && (
+      <ol class="tp__list" aria-label="Tapes">
+        {videos.map((v, i) => (
+          <li>
+            <button type="button" data-index={i} aria-current={i === 0 ? 'true' : undefined}>
+              <img src={ytThumb(v.id)} alt="" loading="lazy" width="160" height="90" />
+              <span class="tp__list-n stamp">{String(i + 1).padStart(2, '0')}</span>
+              <span class="tp__list-title">{v.title}</span>
+              {v.duration && <span class="tp__list-dur">{clock(v.duration)}</span>}
+            </button>
+          </li>
+        ))}
+      </ol>
+    )
+  }
+
+  {
+    videos.map((v, i) =>
+      v.chapters.length > 0 ? (
+        <ol class="tp__chapters" data-for={i} hidden={i !== 0} aria-label={`Setlist — ${v.title}`}>
+          {v.chapters.map((c) => (
+            <li>
+              <a href={`https://www.youtube.com/watch?v=${v.id}&t=${seconds(c.t)}s`} data-seek={seconds(c.t)}>
+                <span class="stamp">{c.t}</span> {c.label}
+              </a>
+            </li>
+          ))}
+        </ol>
+      ) : null,
+    )
+  }
+</div>
+
+<script>
+  declare global {
+    interface Window {
+      YT: any;
+      onYouTubeIframeAPIReady?: () => void;
+    }
+  }
+  type Video = { id: string; title: string; duration: number; chapters: { t: number; label: string }[] };
+
+  const PLAYING = 1, PAUSED = 2, ENDED = 0, BUFFERING = 3;
+
+  let api: Promise<any> | undefined;
+  const loadApi = () =>
+    (api ??= new Promise((resolve) => {
+      if (window.YT?.Player) return resolve(window.YT);
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        prev?.();
+        resolve(window.YT);
+      };
+      const s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      document.head.append(s);
+    }));
+
+  const fmt = (s: number) => {
+    s = Math.max(0, Math.floor(s));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = String(s % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${r}` : `${m}:${r}`;
+  };
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-tape-player]')) setup(root);
+
+  function setup(root: HTMLElement) {
+    const videos: Video[] = JSON.parse(root.dataset.videos!);
+    const $ = <T extends Element = HTMLElement>(sel: string) => root.querySelector(sel) as T;
+    const screen = $('.tp__screen'), bar = $('.tp__bar'), hit = $<HTMLButtonElement>('.tp__hit');
+    const big = $<HTMLButtonElement>('.tp__big'), hint = $('.tp__hint');
+    const playBtn = $<HTMLButtonElement>('.tp__play'), soundBtn = $<HTMLButtonElement>('.tp__sound');
+    const track = $('.tp__track'), fill = $('.tp__fill'), buffer = $('.tp__buffer'), marks = $('.tp__marks');
+    const time = $('.tp__time'), tc = $('.tp__tc'), chapterLabel = $('.tp__chapter');
+    const ytLink = $<HTMLAnchorElement>('.tp__yt'), fsBtn = $<HTMLButtonElement>('.tp__fs');
+    const theatreBtn = $<HTMLButtonElement>('.tp__theatre');
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const saveData = (navigator as any).connection?.saveData === true;
+    const autoplay = !reduced && !saveData;
+
+    let player: any, current = 0, muted = true, userPaused = false, started = false, visible = true;
+    let tick: number | undefined;
+
+    root.classList.add('has-js');
+    bar.hidden = false;
+    hit.hidden = false;
+    if (!document.fullscreenEnabled) fsBtn.hidden = true;
+
+    const drawMarks = () => {
+      const v = videos[current];
+      marks.replaceChildren(
+        ...v.chapters
+          .filter((c) => c.t > 0 && v.duration)
+          .map((c) => {
+            const m = document.createElement('span');
+            m.style.left = `${(c.t / v.duration) * 100}%`;
+            m.title = c.label;
+            return m;
+          }),
+      );
+    };
+
+    const setMuted = (m: boolean) => {
+      muted = m;
+      if (player) m ? player.mute() : (player.unMute(), player.setVolume(100));
+      soundBtn.setAttribute('aria-pressed', String(!m));
+      soundBtn.textContent = m ? 'Sound off' : 'Sound on';
+      root.classList.toggle('is-muted', m);
+      hint.hidden = !m || !started;
+      hit.setAttribute('aria-label', m ? 'Turn sound on' : 'Play or pause');
+    };
+
+    const render = () => {
+      if (!player?.getCurrentTime) return;
+      const v = videos[current];
+      const t = player.getCurrentTime() || 0;
+      const d = player.getDuration() || v.duration || 0;
+      fill.style.width = d ? `${(t / d) * 100}%` : '0';
+      buffer.style.width = `${(player.getVideoLoadedFraction?.() || 0) * 100}%`;
+      time.textContent = `${fmt(t)} / ${fmt(d)}`;
+      tc.textContent = fmt(t);
+      track.setAttribute('aria-valuemax', String(Math.round(d)));
+      track.setAttribute('aria-valuenow', String(Math.round(t)));
+      track.setAttribute('aria-valuetext', `${fmt(t)} of ${fmt(d)}`);
+      const ch = [...v.chapters].reverse().find((c) => t >= c.t);
+      chapterLabel.textContent = ch ? ch.label : '';
+      root.querySelectorAll<HTMLAnchorElement>(`.tp__chapters[data-for="${current}"] a`).forEach((a) =>
+        a.classList.toggle('is-now', ch !== undefined && Number(a.dataset.seek) === ch.t),
+      );
+    };
+
+    const onState = (e: { data: number }) => {
+      const s = e.data;
+      root.classList.toggle('is-playing', s === PLAYING || s === BUFFERING);
+      root.classList.toggle('is-paused', s === PAUSED);
+      playBtn.textContent = s === PLAYING || s === BUFFERING ? '❚❚' : '▶';
+      playBtn.setAttribute('aria-label', s === PLAYING ? 'Pause' : 'Play');
+      if (s === PLAYING && !started) {
+        started = true;
+        root.classList.add('is-live');
+        big.hidden = true;
+        hint.hidden = !muted;
+      }
+      if (s === PLAYING) tick ??= window.setInterval(render, 250);
+      else if (tick !== undefined && s !== BUFFERING) {
+        clearInterval(tick);
+        tick = undefined;
+        render();
+      }
+      if (s === ENDED) {
+        if (!muted && current < videos.length - 1) select(current + 1, 0);
+        else {
+          player.seekTo(0, true);
+          if (muted) player.playVideo(); // silent preview just loops
+        }
+      }
+    };
+
+    const create = (withSound: boolean) =>
+      loadApi().then((YT) => {
+        const v = videos[current];
+        player = new YT.Player($('.tp__mount'), {
+          host: 'https://www.youtube-nocookie.com',
+          videoId: v.id,
+          playerVars: {
+            autoplay: 1, mute: withSound ? 0 : 1, controls: 0, disablekb: 1, fs: 0, rel: 0,
+            iv_load_policy: 3, playsinline: 1, cc_load_policy: 0, origin: location.origin,
+          },
+          events: {
+            onReady: () => {
+              setMuted(!withSound);
+              player.playVideo();
+              render();
+            },
+            onStateChange: onState,
+          },
+        });
+        // Autoplay can be refused (iOS low power mode, browser policy): fall back to a Play button.
+        setTimeout(() => {
+          if (!started) big.hidden = false;
+        }, 3500);
+      });
+
+    const start = (withSound: boolean) => {
+      if (player) {
+        setMuted(!withSound);
+        player.playVideo();
+      } else create(withSound);
+    };
+
+    const select = (i: number, at = 0) => {
+      current = i;
+      const v = videos[i];
+      ytLink.href = `https://www.youtube.com/watch?v=${v.id}`;
+      root.querySelectorAll('.tp__list button').forEach((b, j) => b.toggleAttribute('aria-current', j === i));
+      root.querySelectorAll<HTMLElement>('.tp__chapters').forEach((ol) => (ol.hidden = ol.dataset.for !== String(i)));
+      drawMarks();
+      if (player?.loadVideoById) player.loadVideoById({ videoId: v.id, startSeconds: at });
+      else create(true);
+    };
+
+    // --- controls
+    hit.addEventListener('click', () => {
+      if (!player || !started) return start(true);
+      if (muted) return setMuted(false); // first tap = sound on, like Instagram
+      const s = player.getPlayerState();
+      if (s === PLAYING || s === BUFFERING) (player.pauseVideo(), (userPaused = true));
+      else (player.playVideo(), (userPaused = false));
+    });
+    big.addEventListener('click', () => start(true));
+    playBtn.addEventListener('click', () => {
+      if (!player) return start(true);
+      const s = player.getPlayerState();
+      if (s === PLAYING || s === BUFFERING) (player.pauseVideo(), (userPaused = true));
+      else (player.playVideo(), (userPaused = false));
+    });
+    soundBtn.addEventListener('click', () => (player ? setMuted(!muted) : start(true)));
+
+    const seekTo = (ratio: number) => {
+      if (!player) return;
+      const d = player.getDuration() || videos[current].duration;
+      player.seekTo(Math.min(Math.max(ratio, 0), 1) * d, true);
+      render();
+    };
+    let dragging = false;
+    const ratioAt = (e: PointerEvent) => {
+      const r = track.getBoundingClientRect();
+      return (e.clientX - r.left) / r.width;
+    };
+    track.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      track.setPointerCapture(e.pointerId);
+      seekTo(ratioAt(e));
+    });
+    track.addEventListener('pointermove', (e) => dragging && seekTo(ratioAt(e)));
+    track.addEventListener('pointerup', () => (dragging = false));
+    track.addEventListener('keydown', (e) => {
+      if (!player || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      e.preventDefault();
+      player.seekTo(player.getCurrentTime() + (e.key === 'ArrowRight' ? 5 : -5), true);
+      render();
+    });
+
+    root.querySelectorAll<HTMLButtonElement>('.tp__list button').forEach((b) =>
+      b.addEventListener('click', () => {
+        setMuted(false);
+        select(Number(b.dataset.index));
+      }),
+    );
+    root.querySelectorAll<HTMLAnchorElement>('.tp__chapters a').forEach((a) =>
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const i = Number((a.closest('.tp__chapters') as HTMLElement).dataset.for);
+        const t = Number(a.dataset.seek);
+        if (!player) {
+          current = i;
+          return create(true).then(() => setTimeout(() => player.seekTo(t, true), 800));
+        }
+        setMuted(false);
+        if (i !== current) select(i, t);
+        else (player.seekTo(t, true), player.playVideo());
+        screen.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+      }),
+    );
+
+    theatreBtn.addEventListener('click', () => {
+      const on = !document.documentElement.classList.contains('is-theatre');
+      document.documentElement.classList.toggle('is-theatre', on);
+      theatreBtn.setAttribute('aria-pressed', String(on));
+      screen.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    });
+    fsBtn.addEventListener('click', () =>
+      document.fullscreenElement ? document.exitFullscreen() : screen.requestFullscreen(),
+    );
+
+    // A silent preview pauses when scrolled away; once someone is listening, it keeps going.
+    new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting;
+        if (!player?.getPlayerState || !muted || userPaused) return;
+        visible ? player.playVideo() : player.pauseVideo();
+      },
+      { threshold: 0.2 },
+    ).observe(screen);
+
+    drawMarks();
+    if (autoplay) create(false);
+    else big.hidden = false;
+  }
+</script>
+
+<style>
+  .tp { --tp-bar: 2.6rem; }
+  .tp__screen {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+  }
+  /* The iframe is twice the frame's height and centred, so YouTube's title bar and branding
+     (top and bottom of the player) sit outside the visible area. */
+  .tp__frame {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .tp__frame :global(iframe) {
+    position: absolute;
+    left: 0;
+    top: -50%;
+    width: 100%;
+    height: 200%;
+    border: 0;
+    pointer-events: none;
+  }
+  .tp__poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.6s ease;
+  }
+  .tp.is-live .tp__poster { opacity: 0; pointer-events: none; }
+  .tp__nojs {
+    position: absolute;
+    left: 1rem;
+    bottom: 1rem;
+    font: 500 0.8rem/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: var(--red);
+    color: var(--bg);
+    padding: 0.9em 1.2em;
+    text-decoration: none;
+  }
+  .tp.has-js .tp__nojs { display: none; }
+  .tp__hit {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .tp__hud {
+    position: absolute;
+    inset: 0.9rem 1rem auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font: 500 0.75rem/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg);
+    text-shadow: 0 1px 3px #000;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .tp__state { display: inline-flex; align-items: center; gap: 0.45em; }
+  .tp__state i {
+    width: 0.62em;
+    height: 0.62em;
+    border-radius: 50%;
+    background: var(--red);
+  }
+  .tp.is-playing .tp__state i { animation: blink 1.4s steps(2, jump-none) infinite; }
+  .tp.is-paused .tp__state i { border-radius: 0; width: 0.55em; background: var(--fg); box-shadow: 0.3em 0 0 -0.1em var(--fg); }
+  .tp__chapter { color: var(--fg); opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tp__tc { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+  .tp__hint {
+    position: absolute;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 2;
+    pointer-events: none;
+    font: 500 0.7rem/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.7em 0.9em;
+    background: rgb(11 11 10 / 0.75);
+    border: 1px solid rgb(236 235 230 / 0.35);
+    animation: hint 2.4s ease-in-out infinite;
+  }
+  @keyframes hint { 50% { border-color: var(--red); } }
+  .tp__big {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7em;
+    font: 500 0.85rem/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 1.1em 1.5em;
+    background: var(--red);
+    color: var(--bg);
+    border: 0;
+    cursor: pointer;
+  }
+  .tp__big:hover { background: var(--fg); }
+
+  /* control bar */
+  .tp__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: var(--tp-bar);
+    border: 1px solid var(--rule);
+    border-top: 0;
+    background: var(--bg-2);
+    font: 500 0.72rem/1 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .tp__btn {
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: var(--fg);
+    background: transparent;
+    border: 0;
+    padding: 0 0.8rem;
+    height: var(--tp-bar);
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  .tp__btn:hover { color: var(--red); }
+  .tp__play { min-width: 2.8rem; justify-content: center; }
+  .tp__sound[aria-pressed='false'] { color: var(--dim); }
+  .tp__sound[aria-pressed='true'] { color: var(--red); }
+  .tp__theatre[aria-pressed='true'] { color: var(--red); }
+  .tp__track {
+    position: relative;
+    flex: 1;
+    height: var(--tp-bar);
+    cursor: pointer;
+    touch-action: none;
+  }
+  .tp__track::before,
+  .tp__buffer,
+  .tp__fill {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    height: 3px;
+    translate: 0 -50%;
+  }
+  .tp__track::before { right: 0; background: var(--rule); }
+  .tp__buffer { background: #4a4843; }
+  .tp__fill { background: var(--red); }
+  .tp__fill::after {
+    content: '';
+    position: absolute;
+    right: -5px;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    translate: 0 -50%;
+    background: var(--red);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .tp__track:hover .tp__fill::after,
+  .tp__track:focus-visible .tp__fill::after { opacity: 1; }
+  .tp__marks :global(span) {
+    position: absolute;
+    top: 50%;
+    width: 2px;
+    height: 9px;
+    translate: -1px -50%;
+    background: var(--fg);
+    opacity: 0.7;
+  }
+  .tp__time { padding: 0 0.6rem; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* tape list + setlist */
+  .tp__list {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    gap: 0.5rem;
+  }
+  .tp__list button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 5rem 1fr auto;
+    grid-template-rows: auto 1fr;
+    column-gap: 0.75rem;
+    align-items: start;
+    text-align: left;
+    padding: 0.5rem;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--rule);
+    cursor: pointer;
+    font: 400 0.78rem/1.3 var(--mono);
+  }
+  .tp__list button:hover { border-color: var(--fg); }
+  .tp__list button[aria-current] { border-color: var(--red); }
+  .tp__list img { grid-row: span 2; width: 5rem; aspect-ratio: 16 / 9; object-fit: cover; }
+  .tp__list-n { font-size: 0.7rem; }
+  .tp__list-title { grid-column: 2 / 4; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tp__list-dur { grid-row: 1; grid-column: 3; color: var(--dim); font-size: 0.7rem; }
+  .tp__chapters {
+    list-style: none;
+    margin: 0.8rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .tp__chapters a {
+    display: inline-block;
+    font-size: 0.78rem;
+    padding: 0.45em 0.7em;
+    border: 1px solid var(--rule);
+    text-decoration: none;
+  }
+  .tp__chapters a:hover { border-color: var(--red); color: var(--fg); }
+  .tp__chapters a.is-now { background: var(--red); border-color: var(--red); color: var(--bg); }
+  .tp__chapters a.is-now .stamp { color: var(--bg); }
+
+  /* fullscreen: the frame (with HUD) fills the screen */
+  .tp__screen:fullscreen { aspect-ratio: auto; border: 0; }
+  .tp__screen:fullscreen .tp__frame {
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: min(100vw, 177.78vh);
+    aspect-ratio: 16 / 9;
+  }
+  .tp__screen:fullscreen .tp__poster { object-fit: contain; }
+
+  @media (max-width: 40rem) {
+    .tp__time { display: none; }
+    .tp__theatre { display: none; }
+    .tp__btn { padding: 0 0.6rem; }
+    .tp__hud { inset: 0.6rem 0.7rem auto; font-size: 0.65rem; }
+  }
+</style>

@@ -1,12 +1,12 @@
 ---
 subject: Hoirong
-title: An evening getting our eardrums blown out
+title: Live in the jam room
 series: rehearsal-tapes
 date: 2026-04-03
 published: 2026-04-27
 city: Bangalore
 venue: Hoirong's jam room
-summary: Six songs from Hoirong's jam room — Intro, Bonda, Glass Jaw, XOX, कुता and a Beatles cover.
+summary: "Six tracks from Hoirong's jam room: Intro, Bonda, Glass Jaw, XOX, कुता and a Beatles cover."
 cover: /media/yt/UJdQh0VzcxY.jpg
 heroClip: DXn00PVD-no/00
 spotted: [hoirong]
@@ -30,7 +30,7 @@ youtube:
     duration: 306
 ---
 
-Spent an evening getting our eardrums blown out at Hoirong's jam room. Six songs, one room, no mercy. The last one is Kamal's take on a classic Beatles tune.
+Spent an evening getting our eardrums blown out at Hoirong's jam room. Six tracks, one room. The last one is Kamal's take on a Beatles classic, *Let It Be*.
 
 ## Lyrics
 

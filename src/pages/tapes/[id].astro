@@ -1,7 +1,7 @@
 ---
 import { getEntries, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import YouTube from '../../components/YouTube.astro';
+import TapePlayer from '../../components/TapePlayer.astro';
 import Clip from '../../components/Clip.astro';
 import LoopVideo from '../../components/LoopVideo.astro';
 import { resolveClip } from '../../lib/media.mjs';
@@ -57,6 +57,7 @@ const jsonLd = [
     ...(v.duration && { duration: `PT${Math.floor(v.duration / 60)}M${v.duration % 60}S` }),
   })),
 ];
+const hasTape = data.youtube.length > 0;
 const where = [data.venue, data.city].filter(Boolean).join(', ');
 ---
 
@@ -69,7 +70,7 @@ const where = [data.venue, data.city].filter(Boolean).join(', ');
   jsonLd={jsonLd}
 >
   <article>
-    <header class="wrap ep-head">
+    <header class:list={['wrap ep-head', { 'ep-head--tape': hasTape }]}>
       <div class="ep-head__text">
         <p class="kicker">
           <a href={`/log/#${data.series}`}>{series.label}</a> · {ep.tape}
@@ -83,9 +84,11 @@ const where = [data.venue, data.city].filter(Boolean).join(', ');
           <div><dt>Runtime</dt><dd>{runtime(ep)}</dd></div>
         </dl>
       </div>
-      <div class:list={['ep-head__media', { 'is-portrait': heroShape === 'portrait' }]}>
+      <div class:list={['ep-head__media', { 'is-portrait': !hasTape && heroShape === 'portrait' }]}>
         {
-          data.heroClip ? (
+          hasTape ? (
+            <TapePlayer videos={data.youtube} label={series.code} />
+          ) : data.heroClip ? (
             <LoopVideo ref={data.heroClip} label={series.code} timecode={stamp(data.date)} />
           ) : (
             <img src={coverSrc(data.cover)} alt="" />
@@ -93,19 +96,6 @@ const where = [data.venue, data.city].filter(Boolean).join(', ');
         }
       </div>
     </header>
-
-    {
-      data.youtube.length > 0 && (
-        <section class="wrap tapes" aria-label="Full tapes">
-          <div class="section-head">
-            <h2 class="display display--s">{data.youtube.length > 1 ? 'The tapes' : 'The tape'}</h2>
-          </div>
-          <div class:list={['tapes__grid', { 'is-multi': data.youtube.length > 1 }]}>
-            {data.youtube.map((v) => <YouTube {...v} />)}
-          </div>
-        </section>
-      )
-    }
 
     <div class="wrap ep-body">
       <aside class="ep-aside">
@@ -206,12 +196,12 @@ const where = [data.venue, data.city].filter(Boolean).join(', ');
   .ep-meta dt { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
   .ep-meta dd { margin: 0.25rem 0 0; font-size: 0.9rem; }
 
-  .tapes { margin-top: 1rem; }
-  .tapes__grid.is-multi {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
-    gap: 0 2rem;
+  .ep-head--tape {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.45fr);
+    align-items: start;
   }
+  :global(html.is-theatre) .ep-head--tape { grid-template-columns: 1fr; }
+  :global(html.is-theatre) .ep-head--tape .ep-head__media { order: -1; }
 
   .ep-body {
     display: grid;

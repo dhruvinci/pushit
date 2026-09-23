@@ -1,6 +1,6 @@
 ---
 subject: Seven Bands, One Room
-title: “Is it ok if I take my shirt off?”
+title: Live at Soundglitz
 series: scenes
 date: 2026-05-09
 published: 2026-05-14
@@ -38,4 +38,4 @@ Don't ever let me catch you complaining about a gig like this. If the music does
 
 ::clip DYT8l99DolN/06
 
-Big shout out to the organiser and the bands — Djinn and Miskatonic, Ice Cream Parlour, Omniscient, Boom Kulture, Akathyaa, Barleyrasa and Scyren.
+Big shout out to the organiser and the bands: Djinn and Miskatonic, Ice Cream Parlour, Omniscient, Boom Kulture, Akathyaa, Barleyrasa and Scyren.

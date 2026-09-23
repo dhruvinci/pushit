@@ -1,6 +1,6 @@
 ---
 subject: Godless
-title: A day out with Godless
+title: On the set of Architect Of Torment
 series: bts
 date: 2026-04-30
 published: 2026-04-30

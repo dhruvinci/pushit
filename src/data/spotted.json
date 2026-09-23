@@ -29,7 +29,7 @@
   { "id": "scyren", "name": "Scyren", "kind": "band", "instagram": "scyren.official" },
 
   { "id": "the-humming-tree", "name": "The Humming Tree", "kind": "venue", "city": "Bangalore", "instagram": "the_hummingtree" },
-  { "id": "raft", "name": "Raft", "kind": "venue", "city": "Bangalore" },
+  { "id": "raft", "name": "The Raft", "kind": "venue", "city": "Bangalore" },
   { "id": "soundglitz", "name": "Soundglitz", "kind": "venue", "city": "Bangalore" },
   { "id": "fandom", "name": "Fandom", "kind": "venue", "city": "Bangalore" },
   { "id": "freedom-park", "name": "Freedom Park", "kind": "venue", "city": "Bangalore" },

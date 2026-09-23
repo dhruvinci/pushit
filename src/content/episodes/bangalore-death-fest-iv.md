@@ -1,6 +1,6 @@
 ---
 subject: Bangalore Death Fest IV
-title: Incantation was a ritual for the ages
+title: Live at The Humming Tree
 series: scenes
 date: 2026-06-26
 published: 2026-07-03
