@@ -1,0 +1,78 @@
+---
+import Base from '../layouts/Base.astro';
+import Clip from '../components/Clip.astro';
+import { getEpisodes, SERIES, type Series } from '../lib/episodes';
+import { SITE } from '../site';
+
+const episodes = await getEpisodes();
+---
+
+<Base title="About" image="/og/about.jpg" description={`${SITE.name}: ${SITE.tagline}`}>
+  <section class="wrap page-head">
+    <p class="rec">About</p>
+    <h1 class="display display--xl">Documenting the sick and the disturbed.</h1>
+  </section>
+
+  <section class="wrap about">
+    <div class="prose">
+      <p>
+        Pushit TV is a camera at the front of the pit. We film India's underground — hardcore, death metal, noise
+        and whatever else is too loud for everyone else — in jam rooms, second-floor bars, festivals and, once, on
+        the streets.
+      </p>
+      <p>
+        One underground gig has more energy and character than all of Lollapalooza combined. If the music doesn't
+        entertain you, the people will. We're here to get both on tape.
+      </p>
+      <p>
+        Pushit is made by a small crew with friends from Bangalore's film and music scene — Josh, Angad, Kaushal
+        and whoever else is holding a camera that night.
+      </p>
+    </div>
+
+    <dl class="series">
+      {
+        (Object.keys(SERIES) as Series[]).map((s) => (
+          <div>
+            <dt>
+              <a href={`/log/#${s}`} class="display display--s">{SERIES[s].label}</a>
+              <span class="kicker">{episodes.filter((ep) => ep.data.series === s).length} tapes</span>
+            </dt>
+            <dd>{SERIES[s].blurb}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <section class="wrap people">
+    <div class="section-head">
+      <h2 class="display display--m">People saying Pushit TV</h2>
+      <p class="kicker">(09.05.26)</p>
+    </div>
+    <div class="people__clip">
+      <Clip ref="DYPmtF_vml7/00" caption="Pusha T? Pussytv? Pushyyytivyyyy. Close enough." />
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-head { padding-block: clamp(2rem, 6vw, 4.5rem) clamp(2rem, 5vw, 3rem); }
+  .page-head h1 { margin-top: 1rem; max-width: 12ch; }
+  .about {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: clamp(2rem, 6vw, 6rem);
+  }
+  .series { margin: 0; display: grid; gap: 1.5rem; }
+  .series div { border-top: 1px solid var(--rule); padding-top: 1rem; }
+  .series dt { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  .series dt a { text-decoration: none; }
+  .series dd { margin: 0.5rem 0 0; font: italic 400 1.1rem/1.4 var(--serif); color: var(--dim); }
+  .people { margin-top: clamp(4rem, 8vw, 6rem); }
+  .people__clip { max-width: 24rem; }
+  .people__clip :global(.clip) { margin: 0; }
+  @media (max-width: 52rem) {
+    .about { grid-template-columns: 1fr; }
+  }
+</style>

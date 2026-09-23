@@ -1,0 +1,59 @@
+[
+  {
+    "id": "godless-architect-of-torment",
+    "title": "Architect Of Torment",
+    "artist": "godless",
+    "kind": "Music video",
+    "year": 2026,
+    "youtube": "bp3LlRkgumI",
+    "credits": [
+      { "role": "Shot by", "names": "Pushit TV, Josh & the Vihaara film crew" }
+    ],
+    "note": "Filmed ahead of the band's June 2026 Europe tour.",
+    "bts": "a-day-out-with-godless"
+  },
+  {
+    "id": "maneating-orchid-cosmic-shroud",
+    "title": "Cosmic Shroud",
+    "artist": "maneating-orchid",
+    "kind": "Music video",
+    "year": 2026,
+    "youtube": "pnaWZvTfwAM",
+    "credits": [
+      { "role": "Directed by", "names": "Josh" },
+      { "role": "Shot by", "names": "Angad & Josh" },
+      { "role": "Edited by", "names": "Angad" }
+    ],
+    "note": "From the album Cold Logic.",
+    "bts": "maneating-orchid-cold-logic"
+  },
+  {
+    "id": "maneating-orchid-binary-contagion",
+    "title": "Binary Contagion",
+    "artist": "maneating-orchid",
+    "kind": "Music video",
+    "year": 2026,
+    "youtube": "EXvQlhD1JmI",
+    "credits": [
+      { "role": "Directed by", "names": "Josh" },
+      { "role": "Shot by", "names": "Angad & Josh" },
+      { "role": "Edited by", "names": "Josh" }
+    ],
+    "note": "From the album Cold Logic.",
+    "bts": "maneating-orchid-cold-logic"
+  },
+  {
+    "id": "maneating-orchid-void-engine",
+    "title": "Void Engine",
+    "artist": "maneating-orchid",
+    "kind": "Visualiser",
+    "year": 2026,
+    "youtube": "EVGBe0Tn1Cc",
+    "credits": [
+      { "role": "Visualiser by", "names": "Kaushal" },
+      { "role": "Edited by", "names": "Angad" }
+    ],
+    "note": "From the album Cold Logic.",
+    "bts": "maneating-orchid-cold-logic"
+  }
+]

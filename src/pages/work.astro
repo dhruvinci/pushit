@@ -1,0 +1,178 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import YouTube from '../components/YouTube.astro';
+import { SITE } from '../site';
+
+const work = await Promise.all(
+  (await getCollection('work')).map(async (w) => ({
+    ...w,
+    artist: await getEntry(w.data.artist),
+  })),
+);
+---
+
+<Base
+  title="Work"
+  image="/og/work.jpg"
+  description="Music videos Pushit TV has made with Godless, Maneating Orchid and more. Bands — get filmed."
+>
+  <section class="wrap page-head">
+    <p class="rec">Commissions open</p>
+    <h1 class="display display--xl">We make<br />music videos</h1>
+    <p class="headline">
+      For bands we love. Every idea on the table, and the only test for keeping it: does it work for the song?
+    </p>
+  </section>
+
+  <section class="wrap">
+    <ol class="work">
+      {
+        work.map((w, i) => (
+          <li class="work__item">
+            <div class="work__player">
+              <YouTube id={w.data.youtube} title={`${w.artist.data.name} — ${w.data.title}`} />
+            </div>
+            <div class="work__info">
+              <p class="kicker">
+                <span class="stamp">{String(i + 1).padStart(2, '0')}</span> {w.data.kind} · {w.data.year}
+              </p>
+              <h2 class="display display--m">{w.data.title}</h2>
+              <p class="work__artist">
+                <a href={`/spotted/${w.artist.id}/`}>{w.artist.data.name}</a>
+              </p>
+              <dl class="credits">
+                {w.data.credits.map((c) => (
+                  <div>
+                    <dt>{c.role}</dt>
+                    <dd>{c.names}</dd>
+                  </div>
+                ))}
+              </dl>
+              {w.data.note && <p class="work__note">{w.data.note}</p>}
+              {w.data.bts && (
+                <a class="arrow-link" href={`/tapes/${w.data.bts.id}/`}>
+                  Behind the scenes
+                </a>
+              )}
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="contact" id="contact">
+    <div class="wrap contact__inner">
+      <div>
+        <p class="kicker">Get filmed</p>
+        <h2 class="display display--l">In a band?<br />Playing a show?</h2>
+      </div>
+      <div class="contact__body">
+        <p>
+          Music videos, rehearsal tapes, live sets, or just a camera at your gig. Tell us who you are, what you
+          sound like and when you're playing.
+        </p>
+        {
+          SITE.email ? (
+            <form class="enquiry" data-email={SITE.email}>
+              <label>
+                Band / artist
+                <input name="band" required autocomplete="organization" />
+              </label>
+              <label>
+                What do you need?
+                <select name="what">
+                  <option>Music video</option>
+                  <option>Rehearsal tape</option>
+                  <option>Live set / gig coverage</option>
+                  <option>Something else</option>
+                </select>
+              </label>
+              <label>
+                Links & dates
+                <textarea name="message" rows="4" placeholder="Bandcamp, Instagram, show dates…" />
+              </label>
+              <button class="btn btn--red" type="submit">Write to us</button>
+              <p class="enquiry__hint">Opens your email app with this filled in.</p>
+            </form>
+          ) : (
+            <a class="btn btn--red" href="https://ig.me/m/pushit.tv" rel="noopener">
+              DM us on Instagram ↗
+            </a>
+          )
+        }
+      </div>
+    </div>
+  </section>
+</Base>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('.enquiry');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const d = new FormData(form);
+    const subject = `${d.get('what')} — ${d.get('band')}`;
+    const body = `Band / artist: ${d.get('band')}\nLooking for: ${d.get('what')}\n\n${d.get('message')}`;
+    location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  });
+</script>
+
+<style>
+  .page-head { padding-block: clamp(2rem, 6vw, 4.5rem) clamp(2rem, 5vw, 3.5rem); }
+  .page-head h1 { margin: 1rem 0 1.4rem; }
+  .work { list-style: none; margin: 0; padding: 0; }
+  .work__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    padding-block: clamp(2rem, 4vw, 3rem);
+    border-top: 1px solid var(--rule);
+  }
+  .work__item :global(.yt) { margin-bottom: 0; }
+  .work__item :global(.yt__meta) { display: none; }
+  .work__info h2 { margin: 0.8rem 0 0.4rem; }
+  .work__artist { font: italic 400 1.3rem/1.2 var(--serif); margin: 0 0 1.5rem; }
+  .credits { margin: 0 0 1.5rem; display: grid; gap: 0.7rem; }
+  .credits dt { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .credits dd { margin: 0.2rem 0 0; }
+  .work__note { color: var(--dim); font-size: 0.85rem; margin: 0 0 1.5rem; }
+
+  .contact {
+    margin-top: clamp(4rem, 8vw, 6rem);
+    background: var(--red);
+    color: var(--bg);
+    padding-block: clamp(3rem, 7vw, 5rem);
+  }
+  .contact__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: start;
+  }
+  .contact .kicker { color: var(--bg); }
+  .contact h2 { margin-top: 0.6rem; }
+  .contact__body > p { font: 400 1.25rem/1.5 var(--serif); margin: 0 0 1.8rem; max-width: 36ch; }
+  .contact .btn--red { background: var(--bg); border-color: var(--bg); color: var(--fg); }
+  .contact .btn--red:hover { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+  .enquiry { display: grid; gap: 1rem; max-width: 30rem; }
+  .enquiry label { display: grid; gap: 0.4rem; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  .enquiry input,
+  .enquiry select,
+  .enquiry textarea {
+    font: 400 1rem/1.4 var(--mono);
+    padding: 0.75rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 0;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .enquiry button { justify-self: start; }
+  .enquiry__hint { font-size: 0.72rem; margin: 0; }
+
+  @media (max-width: 52rem) {
+    .work__item,
+    .contact__inner { grid-template-columns: 1fr; }
+  }
+</style>

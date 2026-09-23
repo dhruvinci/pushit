@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pushit.tv/sitemap-index.xml

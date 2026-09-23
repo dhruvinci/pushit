@@ -1,0 +1,86 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { getEpisodes } from '../../lib/episodes';
+
+const spotted = await getCollection('spotted');
+const episodes = await getEpisodes();
+const appearances = (id: string) => episodes.filter((ep) => ep.data.spotted.some((ref) => ref.id === id)).length;
+
+const groups = [
+  { title: 'Bands & artists', kinds: ['band', 'artist'] },
+  { title: 'Venues', kinds: ['venue'] },
+  { title: 'Promoters & labels', kinds: ['promoter', 'label'] },
+].map((g) => ({
+  ...g,
+  items: spotted
+    .filter((s) => g.kinds.includes(s.data.kind))
+    .map((s) => ({ ...s, count: appearances(s.id) }))
+    .sort((a, b) => b.count - a.count || a.data.name.localeCompare(b.data.name)),
+}));
+---
+
+<Base title="Spotted" image="/og/spotted.jpg" description="Every band, venue and crew that has been on Pushit TV.">
+  <section class="wrap page-head">
+    <p class="rec">Mom, I'm on TV</p>
+    <h1 class="display display--xl">Spotted</h1>
+    <p class="headline">Everyone who's been caught on a Pushit tape. If you're here, you're part of it.</p>
+  </section>
+
+  {
+    groups.map((g) => (
+      <section class="wrap group">
+        <div class="section-head">
+          <h2 class="display display--m">{g.title}</h2>
+          <p class="kicker">{g.items.length}</p>
+        </div>
+        <ul class="spotted">
+          {g.items.map((s) => (
+            <li>
+              <a href={`/spotted/${s.id}/`}>
+                <span class="spotted__name">{s.data.name}</span>
+                <span class="spotted__meta">
+                  {[s.data.city, s.data.genre].filter(Boolean).join(' · ') || ' '}
+                </span>
+                <span class="spotted__count">
+                  {s.count} {s.count === 1 ? 'tape' : 'tapes'}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</Base>
+
+<style>
+  .page-head { padding-block: clamp(2rem, 6vw, 4.5rem) 1rem; }
+  .page-head h1 { margin: 1rem 0 1.2rem; }
+  .group { margin-top: clamp(3rem, 6vw, 4.5rem); }
+  .spotted {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    border-top: 1px solid var(--rule);
+    border-left: 1px solid var(--rule);
+  }
+  .spotted a {
+    display: grid;
+    gap: 0.4rem;
+    height: 100%;
+    padding: 1.1rem 1rem 1rem;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    text-decoration: none;
+  }
+  .spotted a:hover { background: var(--red); color: var(--bg); }
+  .spotted__name { font: 400 1.7rem/1 var(--display); text-transform: uppercase; }
+  .spotted__meta,
+  .spotted__count { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+  .spotted__count { color: var(--red); }
+  .spotted a:hover .spotted__meta,
+  .spotted a:hover .spotted__count { color: var(--bg); }
+</style>

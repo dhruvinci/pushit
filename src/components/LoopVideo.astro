@@ -1,0 +1,66 @@
+---
+// A short silent loop in a camcorder-style frame, used for page headers.
+// Falls back to the still when the ref has no loop.
+import { resolveClip } from '../lib/media.mjs';
+
+interface Props {
+  ref: string;
+  label?: string;
+  timecode?: string;
+}
+const { ref, label = 'Rec', timecode } = Astro.props;
+const clip = resolveClip(ref);
+---
+
+<figure class:list={['loop', `loop--${clip.orientation}`]}>
+  {
+    clip.loop ? (
+      <video
+        data-loop
+        src={clip.loop}
+        poster={clip.loop.replace(/\.mp4$/, '.jpg')}
+        width={clip.w}
+        height={clip.h}
+        muted
+        loop
+        playsinline
+        preload="none"
+        aria-hidden="true"
+      />
+    ) : (
+      <img src={clip.still} width={clip.w} height={clip.h} alt="" />
+    )
+  }
+  <figcaption class="loop__hud" aria-hidden="true">
+    <span class="rec">{label}</span>
+    {timecode && <span class="loop__tc">{timecode}</span>}
+  </figcaption>
+</figure>
+
+<style>
+  .loop {
+    position: relative;
+    margin: 0;
+    background: #000;
+    border: 1px solid var(--rule);
+  }
+  .loop video,
+  .loop img {
+    width: 100%;
+    height: auto;
+    max-height: 80vh;
+    object-fit: contain;
+  }
+  .loop__hud {
+    position: absolute;
+    inset: 0.9rem 0.9rem auto;
+    display: flex;
+    justify-content: space-between;
+    font: 500 0.75rem/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg);
+    text-shadow: 0 1px 2px #000;
+    pointer-events: none;
+  }
+</style>

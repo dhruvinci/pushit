@@ -1,0 +1,21 @@
+{
+  "name": "pushit-tv",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "import-media": "./scripts/import-media.sh"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.1",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.4",
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/montserrat": "^5.3.0",
+    "@fontsource/newsreader": "^5.3.0",
+    "astro": "^7.3.4"
+  }
+}

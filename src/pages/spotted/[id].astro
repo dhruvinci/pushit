@@ -1,0 +1,98 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import EpisodeCard from '../../components/EpisodeCard.astro';
+import { getEpisodes, ytThumb } from '../../lib/episodes';
+
+export async function getStaticPaths() {
+  const spotted = await getCollection('spotted');
+  return spotted.map((entry) => ({ params: { id: entry.id }, props: { entry } }));
+}
+
+interface Props {
+  entry: CollectionEntry<'spotted'>;
+}
+const { entry } = Astro.props;
+const { data } = entry;
+const episodes = (await getEpisodes()).filter((ep) => ep.data.spotted.some((ref) => ref.id === entry.id));
+const work = (await getCollection('work')).filter((w) => w.data.artist.id === entry.id);
+const kindLabel = { band: 'Band', artist: 'Artist', venue: 'Venue', promoter: 'Promoter', label: 'Label' }[data.kind];
+---
+
+<Base title={data.name} image={`/og/spotted/${entry.id}.jpg`} type="profile" description={`${data.name} on Pushit TV — ${episodes.length} tapes.`}>
+  <section class="wrap page-head">
+    <p class="kicker"><a href="/spotted/">Spotted</a> · {kindLabel}</p>
+    <h1 class="display display--xl">{data.name}</h1>
+    <ul class="facts">
+      {data.city && <li>{data.city}</li>}
+      {data.genre && <li>{data.genre}</li>}
+      <li>{episodes.length} {episodes.length === 1 ? 'tape' : 'tapes'}</li>
+      {
+        data.instagram && (
+          <li>
+            <a href={`https://www.instagram.com/${data.instagram}/`} rel="noopener">@{data.instagram} ↗</a>
+          </li>
+        )
+      }
+    </ul>
+  </section>
+
+  {
+    work.length > 0 && (
+      <section class="wrap block">
+        <div class="section-head">
+          <h2 class="display display--s">Videos we made together</h2>
+          <a class="arrow-link" href="/work/">Work</a>
+        </div>
+        <ul class="work">
+          {work.map((w) => (
+            <li>
+              <a href={`https://www.youtube.com/watch?v=${w.data.youtube}`} rel="noopener">
+                <img src={ytThumb(w.data.youtube)} alt="" loading="lazy" />
+                <span class="display display--s">{w.data.title}</span>
+                <span class="kicker">{w.data.kind} · {w.data.year}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  <section class="wrap block">
+    <div class="section-head">
+      <h2 class="display display--s">Caught on tape</h2>
+    </div>
+    <div class="grid">
+      {episodes.map((ep) => <EpisodeCard ep={ep} />)}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-head { padding-block: clamp(2rem, 6vw, 4.5rem) 1rem; }
+  .page-head .kicker a { color: var(--fg); text-decoration: none; }
+  .page-head h1 { margin: 1rem 0 1.5rem; overflow-wrap: anywhere; }
+  .facts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .facts li:not(:last-child)::after { content: ''; }
+  .block { margin-top: clamp(3rem, 6vw, 4.5rem); }
+  .grid,
+  .work {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 2.5rem 2rem;
+  }
+  .work { list-style: none; margin: 0; padding: 0; }
+  .work a { display: grid; gap: 0.6rem; text-decoration: none; }
+  .work img { aspect-ratio: 16 / 9; object-fit: cover; width: 100%; }
+</style>

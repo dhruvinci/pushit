@@ -1,0 +1,16 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Tape not found">
+  <section class="wrap lost">
+    <p class="rec">No signal</p>
+    <h1 class="display display--xl">Tape<br />eaten.</h1>
+    <p class="headline">The VCR chewed this one up. Many, many files had to be deleted on the spot.</p>
+    <a class="btn btn--red" href="/log/">Back to the tape log</a>
+  </section>
+</Base>
+
+<style>
+  .lost { padding-block: clamp(3rem, 10vw, 8rem); display: grid; gap: 1.5rem; justify-items: start; }
+</style>

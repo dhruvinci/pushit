@@ -1,0 +1,11 @@
+---
+import { clipHtml } from '../lib/media.mjs';
+
+interface Props {
+  ref: string;
+  caption?: string;
+}
+const { ref, caption } = Astro.props;
+---
+
+<Fragment set:html={clipHtml(ref, caption)} />

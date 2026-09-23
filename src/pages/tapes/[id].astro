@@ -1,0 +1,261 @@
+---
+import { getEntries, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import YouTube from '../../components/YouTube.astro';
+import Clip from '../../components/Clip.astro';
+import LoopVideo from '../../components/LoopVideo.astro';
+import { resolveClip } from '../../lib/media.mjs';
+import { getEpisodes, SERIES, stamp, longDate, runtime, coverSrc, ytThumb, type NumberedEpisode } from '../../lib/episodes';
+
+export async function getStaticPaths() {
+  const episodes = await getEpisodes();
+  return episodes.map((ep, i) => ({
+    params: { id: ep.id },
+    // newer = previous in the list (it's newest first)
+    props: { ep, newer: episodes[i - 1], older: episodes[i + 1] },
+  }));
+}
+
+interface Props {
+  ep: NumberedEpisode;
+  newer?: NumberedEpisode;
+  older?: NumberedEpisode;
+}
+const { ep, newer, older } = Astro.props;
+const { data } = ep;
+const { Content } = await render(ep);
+const spotted = await getEntries(data.spotted);
+const series = SERIES[data.series];
+const show = data.nextShow;
+const upcoming = show && show.date.valueOf() >= Date.now() - 86_400_000;
+const heroShape = data.heroClip ? resolveClip(data.heroClip).orientation : 'landscape';
+const pageUrl = new URL(`/tapes/${ep.id}/`, Astro.site).href;
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: `${data.subject} — ${data.title}`,
+    description: data.summary,
+    datePublished: data.published.toISOString(),
+    image: new URL(`/og/tapes/${ep.id}.jpg`, Astro.site).href,
+    url: pageUrl,
+    author: { '@id': `${Astro.site}#org` },
+    publisher: { '@id': `${Astro.site}#org` },
+    ...(data.venue && {
+      contentLocation: { '@type': 'Place', name: data.venue, address: data.city },
+    }),
+  },
+  ...data.youtube.map((v) => ({
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: `${data.subject} — ${v.title}`,
+    description: data.summary,
+    uploadDate: data.published.toISOString(),
+    thumbnailUrl: new URL(ytThumb(v.id), Astro.site).href,
+    embedUrl: `https://www.youtube-nocookie.com/embed/${v.id}`,
+    contentUrl: `https://www.youtube.com/watch?v=${v.id}`,
+    ...(v.duration && { duration: `PT${Math.floor(v.duration / 60)}M${v.duration % 60}S` }),
+  })),
+];
+const where = [data.venue, data.city].filter(Boolean).join(', ');
+---
+
+<Base
+  title={`${data.subject} — ${data.title}`}
+  description={data.summary}
+  image={`/og/tapes/${ep.id}.jpg`}
+  type="article"
+  published={data.published}
+  jsonLd={jsonLd}
+>
+  <article>
+    <header class="wrap ep-head">
+      <div class="ep-head__text">
+        <p class="kicker">
+          <a href={`/log/#${data.series}`}>{series.label}</a> · {ep.tape}
+        </p>
+        <p class="stamp ep-head__stamp">{stamp(data.date)}</p>
+        <h1 class="display display--l">{data.subject}</h1>
+        <p class="headline">{data.title}</p>
+        <dl class="ep-meta">
+          {where && (<div><dt>Where</dt><dd>{where}</dd></div>)}
+          <div><dt>Filmed</dt><dd>{longDate(data.date)}</dd></div>
+          <div><dt>Runtime</dt><dd>{runtime(ep)}</dd></div>
+        </dl>
+      </div>
+      <div class:list={['ep-head__media', { 'is-portrait': heroShape === 'portrait' }]}>
+        {
+          data.heroClip ? (
+            <LoopVideo ref={data.heroClip} label={series.code} timecode={stamp(data.date)} />
+          ) : (
+            <img src={coverSrc(data.cover)} alt="" />
+          )
+        }
+      </div>
+    </header>
+
+    {
+      data.youtube.length > 0 && (
+        <section class="wrap tapes" aria-label="Full tapes">
+          <div class="section-head">
+            <h2 class="display display--s">{data.youtube.length > 1 ? 'The tapes' : 'The tape'}</h2>
+          </div>
+          <div class:list={['tapes__grid', { 'is-multi': data.youtube.length > 1 }]}>
+            {data.youtube.map((v) => <YouTube {...v} />)}
+          </div>
+        </section>
+      )
+    }
+
+    <div class="wrap ep-body">
+      <aside class="ep-aside">
+        {
+          data.lineup.length > 0 && (
+            <section>
+              <h2 class="kicker">Line-up</h2>
+              <ul>{data.lineup.map((name) => <li>{name}</li>)}</ul>
+            </section>
+          )
+        }
+        {
+          show && (
+            <section class:list={['show', { 'is-past': !upcoming }]}>
+              <h2 class="kicker">{upcoming ? 'Catch them live' : 'The show'}</h2>
+              <p class="stamp">{stamp(show.date)}</p>
+              <p class="show__venue">{show.venue}</p>
+              <p>{show.city}</p>
+              {show.note && <p class="show__note">{show.note}</p>}
+            </section>
+          )
+        }
+        {
+          spotted.length > 0 && (
+            <section>
+              <h2 class="kicker">Spotted in this tape</h2>
+              <ul class="chips">
+                {spotted.map((s) => (
+                  <li><a href={`/spotted/${s.id}/`}>{s.data.name}</a></li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
+        {
+          data.instagram.length > 0 && (
+            <section>
+              <h2 class="kicker">On Instagram</h2>
+              <ul>
+                {data.instagram.map((code, i) => (
+                  <li><a href={`https://www.instagram.com/p/${code}/`} rel="noopener">Post {i + 1} ↗</a></li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
+      </aside>
+
+      <div class="prose">
+        <Content />
+        {data.gallery.map((ref) => <Clip ref={ref} />)}
+      </div>
+    </div>
+
+    <nav class="wrap ep-nav" aria-label="More tapes">
+      {
+        older ? (
+          <a href={`/tapes/${older.id}/`} class="ep-nav__link">
+            <span class="kicker">← Older · {older.tape}</span>
+            <span class="display display--s">{older.data.subject}</span>
+          </a>
+        ) : <span />
+      }
+      {
+        newer && (
+          <a href={`/tapes/${newer.id}/`} class="ep-nav__link ep-nav__link--next">
+            <span class="kicker">Newer · {newer.tape} →</span>
+            <span class="display display--s">{newer.data.subject}</span>
+          </a>
+        )
+      }
+    </nav>
+  </article>
+</Base>
+
+<style>
+  .ep-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 4vw, 4rem);
+    align-items: end;
+    padding-block: clamp(2rem, 5vw, 4rem);
+  }
+  .ep-head .kicker a { text-decoration: none; color: var(--fg); }
+  .ep-head__stamp { margin: 1.2rem 0 0.6rem; font-size: 0.9rem; }
+  .ep-head h1 { margin-bottom: 1rem; overflow-wrap: anywhere; }
+  .ep-head__media img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+  .ep-head__media.is-portrait { max-width: 24rem; justify-self: end; width: 100%; }
+
+  .ep-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2.5rem;
+    margin: 2rem 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+  }
+  .ep-meta dt { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .ep-meta dd { margin: 0.25rem 0 0; font-size: 0.9rem; }
+
+  .tapes { margin-top: 1rem; }
+  .tapes__grid.is-multi {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+    gap: 0 2rem;
+  }
+
+  .ep-body {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 5rem);
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+  }
+  .ep-aside { font-size: 0.85rem; }
+  .ep-aside section {
+    padding-bottom: 1.4rem;
+    margin-bottom: 1.4rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ep-aside h2 { margin-bottom: 0.8rem; }
+  .ep-aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+  .ep-aside p { margin: 0 0 0.2rem; }
+  .chips { display: flex !important; flex-wrap: wrap; gap: 0.4rem !important; }
+  .chips a {
+    display: inline-block;
+    border: 1px solid var(--rule);
+    padding: 0.35em 0.6em;
+    text-decoration: none;
+    font-size: 0.78rem;
+  }
+  .chips a:hover { border-color: var(--red); }
+  .show__venue { font: 400 1.6rem/1 var(--display); text-transform: uppercase; margin-top: 0.4rem !important; }
+  .show__note { color: var(--dim); margin-top: 0.5rem !important; }
+  .show.is-past .stamp { color: var(--dim); }
+
+  .ep-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-top: clamp(3rem, 7vw, 5rem);
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--fg);
+  }
+  .ep-nav__link { display: grid; gap: 0.6rem; text-decoration: none; }
+  .ep-nav__link--next { text-align: right; margin-left: auto; }
+
+  @media (max-width: 52rem) {
+    .ep-head { grid-template-columns: 1fr; }
+    .ep-head__media.is-portrait { justify-self: start; max-width: 20rem; }
+    .ep-body { grid-template-columns: 1fr; }
+    .ep-aside { order: 2; }
+  }
+</style>

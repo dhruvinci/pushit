@@ -1,0 +1,82 @@
+---
+import Base from '../layouts/Base.astro';
+import TapeLog from '../components/TapeLog.astro';
+import { getEpisodes, SERIES, type Series } from '../lib/episodes';
+
+const episodes = await getEpisodes();
+const counts = Object.fromEntries(
+  (Object.keys(SERIES) as Series[]).map((s) => [s, episodes.filter((ep) => ep.data.series === s).length]),
+);
+---
+
+<Base title="The tape log" image="/og/log.jpg" description="Every rehearsal tape, scene diary, portrait and special from Pushit TV.">
+  <section class="wrap page-head">
+    <p class="rec">Archive · {episodes.length} tapes</p>
+    <h1 class="display display--xl">The tape log</h1>
+  </section>
+
+  <section class="wrap">
+    <div class="filters" role="group" aria-label="Filter by series">
+      <button type="button" data-filter="all" aria-pressed="true">All <span>{episodes.length}</span></button>
+      {
+        (Object.keys(SERIES) as Series[]).map((s) => (
+          <button type="button" data-filter={s} aria-pressed="false" id={s}>
+            {SERIES[s].label} <span>{counts[s]}</span>
+          </button>
+        ))
+      }
+    </div>
+    <p class="filters__blurb" aria-live="polite"></p>
+    <TapeLog episodes={episodes} />
+  </section>
+</Base>
+
+<script is:inline define:vars={{ blurbs: Object.fromEntries(Object.entries(SERIES).map(([k, v]) => [k, v.blurb])) }}>
+  const buttons = document.querySelectorAll('[data-filter]');
+  const rows = document.querySelectorAll('.log__row');
+  const blurb = document.querySelector('.filters__blurb');
+  const apply = (filter) => {
+    buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === filter)));
+    rows.forEach((r) => (r.hidden = filter !== 'all' && r.dataset.series !== filter));
+    blurb.textContent = blurbs[filter] ?? '';
+  };
+  buttons.forEach((b) =>
+    b.addEventListener('click', () => {
+      apply(b.dataset.filter);
+      history.replaceState(null, '', b.dataset.filter === 'all' ? location.pathname : `#${b.dataset.filter}`);
+    }),
+  );
+  const initial = location.hash.slice(1);
+  if (initial && blurbs[initial]) apply(initial);
+</script>
+
+<style>
+  .page-head { padding-block: clamp(2rem, 6vw, 4.5rem) 2rem; }
+  .page-head h1 { margin-top: 1rem; }
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .filters button {
+    font: 500 0.75rem/1 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.75em 1em;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--rule);
+    cursor: pointer;
+  }
+  .filters button span { color: var(--dim); margin-left: 0.3em; }
+  .filters button:hover { border-color: var(--fg); }
+  .filters button[aria-pressed='true'] { background: var(--red); border-color: var(--red); color: var(--bg); }
+  .filters button[aria-pressed='true'] span { color: var(--bg); }
+  .filters__blurb {
+    font: italic 400 1.15rem/1.4 var(--serif);
+    color: var(--dim);
+    min-height: 1.6em;
+    margin: 0 0 1.5rem;
+  }
+</style>

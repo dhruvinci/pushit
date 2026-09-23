@@ -1,0 +1,85 @@
+---
+import { SERIES, stamp, runtime, type NumberedEpisode } from '../lib/episodes';
+
+interface Props {
+  episodes: NumberedEpisode[];
+}
+const { episodes } = Astro.props;
+---
+
+<ol class="log">
+  {
+    episodes.map((ep) => (
+      <li class="log__row" data-series={ep.data.series}>
+        <a href={`/tapes/${ep.id}/`}>
+          <span class="log__tape">{ep.tape}</span>
+          <span class="log__date stamp">{stamp(ep.data.date)}</span>
+          <span class="log__series">{SERIES[ep.data.series].label}</span>
+          <span class="log__title">
+            <span class="log__subject">{ep.data.subject}</span>
+            <span class="log__headline">{ep.data.title}</span>
+          </span>
+          <span class="log__city">{ep.data.city ?? '—'}</span>
+          <span class="log__run">{runtime(ep)}</span>
+        </a>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  .log {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .log__row a {
+    display: grid;
+    grid-template-columns: 5.5rem 6.5rem 11rem minmax(0, 1fr) 7rem 5rem;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 1.1rem 0.75rem;
+    border-bottom: 1px solid var(--rule);
+    text-decoration: none;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    transition: background 0.12s, color 0.12s;
+  }
+  .log__row a:hover {
+    background: var(--red);
+    color: var(--bg);
+  }
+  .log__row a:hover .stamp,
+  .log__row a:hover .log__series,
+  .log__row a:hover .log__city,
+  .log__row a:hover .log__tape { color: var(--bg); }
+  .log__tape,
+  .log__series,
+  .log__city { color: var(--dim); text-transform: uppercase; }
+  .log__run { text-align: right; font-variant-numeric: tabular-nums; }
+  .log__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.9rem; }
+  .log__subject {
+    font: 400 clamp(1.3rem, 2.2vw, 1.75rem) / 1 var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+  .log__headline { font: italic 400 1rem/1.3 var(--serif); letter-spacing: 0; }
+
+  @media (max-width: 60rem) {
+    .log__row a {
+      grid-template-columns: auto auto 1fr auto;
+      grid-template-areas:
+        'date tape series run'
+        'title title title title';
+      gap: 0.5rem 0.9rem;
+      padding-inline: 0.25rem;
+    }
+    .log__date { grid-area: date; }
+    .log__tape { grid-area: tape; }
+    .log__series { grid-area: series; }
+    .log__run { grid-area: run; }
+    .log__title { grid-area: title; }
+    .log__city { display: none; }
+  }
+</style>

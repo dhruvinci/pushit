@@ -1,0 +1,217 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import TapeLog from '../components/TapeLog.astro';
+import EpisodeCard from '../components/EpisodeCard.astro';
+import LoopVideo from '../components/LoopVideo.astro';
+import { getEpisodes, SERIES, stamp, runtime, ytThumb } from '../lib/episodes';
+import { SITE } from '../site';
+import { resolveClip } from '../lib/media.mjs';
+
+const episodes = await getEpisodes();
+const latest = episodes.find((ep) => ep.data.heroClip) ?? episodes[0];
+const heroShape = resolveClip(latest.data.heroClip!).orientation;
+const diaries = episodes.filter((ep) => ep.data.series === 'scenes' || ep.data.series === 'specials').slice(0, 3);
+const work = await getCollection('work');
+const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === 'band' || s.data.kind === 'artist');
+---
+
+<Base>
+  <section class:list={['hero wrap', `hero--${heroShape}`]}>
+    <div class="hero__text">
+      <p class="rec">Now showing · {latest.tape}</p>
+      <p class="hero__stamp stamp">{stamp(latest.data.date)} — {SERIES[latest.data.series].label}</p>
+      <h1 class="display display--xl">{latest.data.subject}</h1>
+      <p class="headline">{latest.data.title}</p>
+      <p class="hero__summary">{latest.data.summary}</p>
+      <div class="hero__actions">
+        <a class="btn btn--red" href={`/tapes/${latest.id}/`}>▶ Watch the tape</a>
+        <a class="arrow-link" href="/log/">All tapes</a>
+      </div>
+    </div>
+    <div class="hero__video">
+      <LoopVideo ref={latest.data.heroClip!} timecode={runtime(latest)} />
+    </div>
+  </section>
+
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee__track">
+      {
+        Array.from({ length: 4 }).map(() => (
+          <span>
+            {SITE.tagline} <i>✶</i> Checkit. Pushit. <i>✶</i>
+          </span>
+        ))
+      }
+    </div>
+  </div>
+  <p class="sr-only">{SITE.tagline}</p>
+
+  <section class="wrap block">
+    <div class="section-head">
+      <h2 class="display display--m">The tape log</h2>
+      <a class="arrow-link" href="/log/">Full log</a>
+    </div>
+    <TapeLog episodes={episodes.slice(0, 6)} />
+  </section>
+
+  <section class="wrap block">
+    <div class="section-head">
+      <div>
+        <p class="kicker">Gig diaries</p>
+        <h2 class="display display--m">Scenes from the scene</h2>
+      </div>
+      <a class="arrow-link" href="/log/#scenes">Every diary</a>
+    </div>
+    <div class="diaries">
+      {diaries.map((ep, i) => <EpisodeCard ep={ep} size={i === 0 ? 'l' : 'm'} />)}
+    </div>
+  </section>
+
+  <section class="work-strip">
+    <div class="wrap">
+      <div class="work-strip__head">
+        <p class="kicker">Work</p>
+        <h2 class="display display--l">We also make<br />music videos.</h2>
+        <p class="work-strip__copy">
+          For bands we love. Godless, Maneating Orchid and whoever's next. If you're in a band and want something
+          that looks like this site feels, talk to us.
+        </p>
+        <a class="btn" href="/work/">See the work</a>
+      </div>
+      <ul class="work-strip__grid">
+        {
+          work.map((w) => (
+            <li>
+              <a href="/work/">
+                <img src={ytThumb(w.data.youtube)} alt="" loading="lazy" decoding="async" />
+                <span>{w.data.title}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="wrap block">
+    <div class="section-head">
+      <div>
+        <p class="kicker">Mom, I'm on TV</p>
+        <h2 class="display display--m">Spotted on Pushit</h2>
+      </div>
+      <a class="arrow-link" href="/spotted/">Everyone</a>
+    </div>
+    <p class="roll">
+      {
+        spotted.map((s, i) => (
+          <>
+            <a href={`/spotted/${s.id}/`}>{s.data.name}</a>
+            {i < spotted.length - 1 && <span aria-hidden="true"> / </span>}
+          </>
+        ))
+      }
+    </p>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 4vw, 4rem);
+    align-items: end;
+    padding-block: clamp(2rem, 6vw, 5rem) clamp(2rem, 5vw, 4rem);
+  }
+  .hero__stamp { margin: 1.4rem 0 0.8rem; font-size: 0.85rem; }
+  .hero h1 { margin-bottom: 1.2rem; overflow-wrap: anywhere; }
+  .hero__summary { color: var(--dim); max-width: 44ch; margin: 1rem 0 1.8rem; font-size: 0.9rem; }
+  .hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
+  .hero__video { max-width: 26rem; justify-self: end; width: 100%; }
+  .hero--landscape { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+  .hero--landscape .hero__video { max-width: none; }
+
+  .marquee {
+    overflow: hidden;
+    border-block: 1px solid var(--fg);
+    background: var(--red);
+    color: var(--bg);
+    white-space: nowrap;
+  }
+  .marquee__track {
+    display: inline-flex;
+    animation: marquee 38s linear infinite;
+  }
+  .marquee span {
+    font: 400 clamp(1.6rem, 3.5vw, 2.6rem) / 1 var(--display);
+    text-transform: uppercase;
+    padding: 0.7rem 0.6rem;
+  }
+  .marquee i { font-style: normal; padding-inline: 0.6rem; }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+
+  .block { margin-top: clamp(4rem, 9vw, 7rem); }
+
+  .diaries {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 2.5rem clamp(1.5rem, 3vw, 2.5rem);
+  }
+  .diaries > :global(:first-child) { grid-row: span 2; }
+
+  .work-strip {
+    margin-top: clamp(4rem, 9vw, 7rem);
+    background: var(--fg);
+    color: var(--bg);
+    padding-block: clamp(3rem, 7vw, 5.5rem);
+  }
+  .work-strip .wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: center;
+  }
+  .work-strip .kicker { color: var(--red-deep); }
+  .work-strip h2 { margin: 0.6rem 0 1.2rem; }
+  .work-strip__copy { font: 400 1.15rem/1.5 var(--serif); max-width: 36ch; margin: 0 0 1.8rem; }
+  .work-strip .btn { border-color: var(--bg); color: var(--bg); }
+  .work-strip .btn:hover { background: var(--bg); color: var(--fg); }
+  .work-strip__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .work-strip__grid a { display: block; position: relative; text-decoration: none; }
+  .work-strip__grid img { aspect-ratio: 16 / 9; object-fit: cover; width: 100%; }
+  .work-strip__grid span {
+    position: absolute;
+    left: 0.5rem;
+    bottom: 0.5rem;
+    font: 400 1.1rem/1 var(--display);
+    text-transform: uppercase;
+    background: var(--bg);
+    color: var(--fg);
+    padding: 0.35em 0.5em;
+  }
+  .work-strip__grid a:hover span { background: var(--red); }
+
+  .roll {
+    font: 400 clamp(2rem, 5.4vw, 4.4rem) / 1.02 var(--display);
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .roll a { text-decoration: none; }
+  .roll span { color: var(--red); }
+
+  @media (max-width: 52rem) {
+    .hero { grid-template-columns: 1fr; }
+    .hero__video { justify-self: start; max-width: 22rem; }
+    .diaries { grid-template-columns: 1fr; }
+    .diaries > :global(:first-child) { grid-row: auto; }
+    .work-strip .wrap { grid-template-columns: 1fr; }
+  }
+</style>
