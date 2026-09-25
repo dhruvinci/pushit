@@ -72,5 +72,6 @@
     "DZR3mbDD-n3/08": { "w": 588, "h": 332, "video": false }
   }, "loops": {
 
-    "DYg5deLPj9O/00": { "w": 640, "h": 480 }
+    "Ddsnm3_k_Sg/02": { "w": 960, "h": 540, "audio": true },
+    "DYg5deLPj9O/00": { "w": 640, "h": 480, "audio": true }
   } }

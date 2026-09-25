@@ -4,12 +4,19 @@ import Base from '../layouts/Base.astro';
 import TapeLog from '../components/TapeLog.astro';
 import EpisodeCard from '../components/EpisodeCard.astro';
 import TapePlayer from '../components/TapePlayer.astro';
-import { getEpisodes, SERIES, stamp, ytThumb } from '../lib/episodes';
+import LoopVideo from '../components/LoopVideo.astro';
+import { getEpisodes, SERIES, stamp, ytThumb, coverSrc } from '../lib/episodes';
 import { SITE } from '../site';
 
 const episodes = await getEpisodes();
-// The newest tape with a YouTube video plays in the hero
-const latest = episodes.find((ep) => ep.data.youtube.length > 0) ?? episodes[0];
+// The newest tape leads the hero: its YouTube video plays in the tape player, or, for an
+// Instagram-only tape, its heroClip loops silently and clicking through opens the post.
+const latest = episodes[0];
+const hasTape = latest.data.youtube.length > 0;
+const heroRef = latest.data.heroClip ?? (latest.data.cover.startsWith('/') ? undefined : latest.data.cover);
+// Shrink the headline until its longest word fits the column rather than break mid-word
+const longestWord = Math.max(...latest.data.subject.split(/\s+/).map((w) => w.length));
+const instagram = latest.data.instagram[0] ? `https://www.instagram.com/p/${latest.data.instagram[0]}/` : undefined;
 const diaries = episodes.filter((ep) => ep.data.series === 'scenes' || ep.data.series === 'specials').slice(0, 3);
 const work = await getCollection('work');
 const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === 'band' || s.data.kind === 'artist');
@@ -20,16 +27,33 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
     <div class="hero__text">
       <p class="rec">Now showing · {latest.tape}</p>
       <p class="hero__stamp stamp">{stamp(latest.data.date)} — {SERIES[latest.data.series].label}</p>
-      <h1 class="display display--xl">{latest.data.subject}</h1>
+      <h1 class="display display--xl hero__title" style={`--chars: ${longestWord}`}>{latest.data.subject}</h1>
       <p class="headline">{latest.data.title}</p>
       <p class="hero__summary">{latest.data.summary}</p>
       <div class="hero__actions">
-        <a class="btn btn--red" href={`/tapes/${latest.id}/`}>▶ Watch the tape</a>
+        {
+          hasTape || !instagram ? (
+            <a class="btn btn--red" href={`/tapes/${latest.id}/`}>▶ Watch the tape</a>
+          ) : (
+            <>
+              <a class="btn btn--red" href={instagram} rel="noopener">▶ Watch on Instagram</a>
+              <a class="arrow-link" href={`/tapes/${latest.id}/`}>The full diary</a>
+            </>
+          )
+        }
         <a class="arrow-link" href="/log/">All tapes</a>
       </div>
     </div>
     <div class="hero__video">
-      <TapePlayer videos={latest.data.youtube} label={SERIES[latest.data.series].code} compact />
+      {
+        hasTape ? (
+          <TapePlayer videos={latest.data.youtube} label={SERIES[latest.data.series].code} compact />
+        ) : heroRef ? (
+          <LoopVideo ref={heroRef} label={SERIES[latest.data.series].code} timecode={stamp(latest.data.date)} href={instagram} />
+        ) : (
+          <a href={instagram ?? `/tapes/${latest.id}/`}><img src={coverSrc(latest.data.cover)} alt="" /></a>
+        )
+      }
     </div>
   </section>
 
@@ -124,6 +148,9 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
   }
   .hero__stamp { margin: 1.4rem 0 0.8rem; font-size: 0.85rem; }
   .hero h1 { margin-bottom: 1.2rem; overflow-wrap: anywhere; }
+  .hero__text { container-type: inline-size; }
+  /* Anton caps run about 0.5em wide; wide ones (M, W) more, hence the margin */
+  .hero__title { font-size: min(clamp(3.6rem, 13vw, 11rem), 100cqi / (var(--chars) * 0.56)); }
   .hero__summary { color: var(--dim); max-width: 44ch; margin: 1rem 0 1.8rem; font-size: 0.9rem; }
   .hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
   .hero { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr); align-items: center; }

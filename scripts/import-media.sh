@@ -3,7 +3,7 @@
 #
 # The site hosts as little as possible — full videos are YouTube embeds. What ends up in public/media:
 #   ig/<shortcode>/<nn>.jpg   a still for every carousel item (video frames link back to Instagram)
-#   loops/<shortcode>/<nn>.mp4  ~10 s silent header loops (+ .jpg poster), only for refs used as `heroClip`
+#   loops/<shortcode>/<nn>.mp4  ~10 s header loops with sound (+ .jpg poster), only for refs used as `heroClip`
 #   yt/<id>.jpg               YouTube poster frames
 # plus src/data/media.json, the manifest pages build from (so media can live on R2 instead of public/).
 #
@@ -46,16 +46,17 @@ while IFS=$'\t' read -r code idx kind url; do
   fi
 done
 
-# 2. Header loops: 10 s, no audio, for every heroClip in the episodes
+# 2. Header loops: 10 s for every heroClip in the episodes. They autoplay muted; the audio is there
+#    for the loop's sound button.
 for ref in $(sed -n 's/^heroClip:[[:space:]]*//p' src/content/episodes/*.md | sort -u); do
   src="$RAW/$ref.mp4"; dst="$OUT/loops/$ref.mp4"
   [ -f "$dst" ] && continue
   [ -f "$src" ] || { echo "no raw video for heroClip $ref" >&2; continue; }
   mkdir -p "$(dirname "$dst")"
   start=$(awk -v r="$ref" '$1 == r { print $2 }' scripts/loop-starts.txt 2>/dev/null); start=${start:-1}
-  ff -ss "$start" -t 10 -i "$src" -an \
-    -vf "scale='if(gt(iw,ih),-2,min(720,iw))':'if(gt(iw,ih),min(720,ih),-2)'" \
-    -c:v libx264 -preset slow -crf 28 -pix_fmt yuv420p -movflags +faststart "$dst"
+  ff -ss "$start" -t 10 -i "$src" -c:a aac -b:a 96k \
+    -vf "scale='if(gt(iw,ih),-2,min(540,iw))':'if(gt(iw,ih),min(540,ih),-2)'" \
+    -c:v libx264 -preset slow -crf 30 -pix_fmt yuv420p -movflags +faststart "$dst"
 done
 # poster = the loop's own first frame, so nothing flashes when it starts
 for f in "$OUT"/loops/*/*.mp4; do
@@ -71,6 +72,7 @@ done
 
 # 4. Manifest: dimensions, whether a still is a video frame, and which loops exist
 dims() { ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=, "$1"; }
+has_audio() { [ -n "$(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$1")" ] && echo true || echo false; }
 {
   echo '{ "clips": {'
   sep=''
@@ -86,7 +88,7 @@ dims() { ffprobe -v error -select_streams v:0 -show_entries stream=width,height 
     [ -f "$f" ] || continue
     ref=${f#"$OUT/loops/"}; ref=${ref%.mp4}
     IFS=, read -r w h <<<"$(dims "$f")"
-    printf '%s\n    "%s": { "w": %s, "h": %s }' "$sep" "$ref" "$w" "$h"; sep=','
+    printf '%s\n    "%s": { "w": %s, "h": %s, "audio": %s }' "$sep" "$ref" "$w" "$h" "$(has_audio "$f")"; sep=','
   done
   echo; echo '  } }'
 } > src/data/media.json

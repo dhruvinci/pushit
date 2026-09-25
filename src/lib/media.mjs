@@ -12,7 +12,7 @@ export const mediaUrl = (path) => `${BASE}/media/${path}`;
 
 /**
  * A ref is "<instagram shortcode>/<carousel index>", e.g. "DaVcpQwj-3d/03".
- * Every ref has a still; refs used as header loops also have a short silent video.
+ * Every ref has a still; refs used as header loops also have a short video (muted until asked).
  */
 export function resolveClip(ref) {
   const clip = manifest.clips[ref];
@@ -22,6 +22,7 @@ export function resolveClip(ref) {
   return {
     still: mediaUrl(`ig/${ref}.jpg`),
     loop: loop ? mediaUrl(`loops/${ref}.mp4`) : null,
+    loopAudio: loop?.audio ?? false,
     w: clip.w,
     h: clip.h,
     fromVideo: clip.video,

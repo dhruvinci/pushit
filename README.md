@@ -32,7 +32,7 @@ npm run build     # static site in dist/
 
 Full videos are **YouTube embeds** (poster-first: nothing loads from YouTube until someone presses play).
 Instagram footage appears as **stills that link to the post**. The only video the site hosts is a
-~10 s silent loop per page header (`heroClip`). Total self-hosted media is a few MB.
+~10 s loop per page header (`heroClip`), muted until someone taps for sound. Total self-hosted media is a few MB.
 
 - `scripts/import-media.sh` builds `public/media` from a scraped Instagram export (`research/ig/posts.json`,
   not committed) and writes `src/data/media.json`, the manifest pages build from. Needs `ffmpeg`, `jq`, `curl`.

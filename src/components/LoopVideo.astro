@@ -1,18 +1,22 @@
 ---
-// A short silent loop in a camcorder-style frame, used for page headers.
-// Falls back to the still when the ref has no loop.
+// A short loop in a camcorder-style frame, used for page headers. It plays muted; loops cut with
+// audio get a sound button.
+// Falls back to the still when the ref has no loop. With `href` the whole frame is a link.
 import { resolveClip } from '../lib/media.mjs';
 
 interface Props {
   ref: string;
   label?: string;
   timecode?: string;
+  href?: string;
+  linkLabel?: string;
 }
-const { ref, label = 'Rec', timecode } = Astro.props;
+const { ref, label = 'Rec', timecode, href, linkLabel = 'Watch on Instagram' } = Astro.props;
 const clip = resolveClip(ref);
 ---
 
 <figure class:list={['loop', `loop--${clip.orientation}`]}>
+  {href && <a class="loop__link" href={href} rel="noopener" aria-label={linkLabel} />}
   {
     clip.loop ? (
       <video
@@ -35,6 +39,10 @@ const clip = resolveClip(ref);
     <span class="rec">{label}</span>
     {timecode && <span class="loop__tc">{timecode}</span>}
   </figcaption>
+  {href && <span class="loop__cta" aria-hidden="true">▶ {linkLabel}</span>}
+  {clip.loop && clip.loopAudio && (
+    <button class="loop__sound" type="button" aria-pressed="false" data-loop-sound>Sound off</button>
+  )}
 </figure>
 
 <style>
@@ -63,4 +71,57 @@ const clip = resolveClip(ref);
     text-shadow: 0 1px 2px #000;
     pointer-events: none;
   }
+  .loop__link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  .loop__cta {
+    position: absolute;
+    left: 0.9rem;
+    bottom: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    background: rgb(0 0 0 / 0.65);
+    font: 500 0.75rem/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg);
+    pointer-events: none;
+    transition: background 0.15s;
+  }
+  .loop__sound {
+    position: absolute;
+    right: 0.9rem;
+    bottom: 0.9rem;
+    z-index: 2;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    background: rgb(0 0 0 / 0.65);
+    font: 500 0.75rem/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    cursor: pointer;
+  }
+  .loop__sound:hover,
+  .loop__sound[aria-pressed='true'] {
+    color: var(--red);
+  }
+  .loop:has(.loop__link:hover) .loop__cta,
+  .loop:has(.loop__link:focus-visible) .loop__cta {
+    background: var(--red);
+  }
 </style>
+
+<script>
+  // Sound button: unmute (and make sure it's playing, even with reduced motion), or mute again.
+  document.querySelectorAll<HTMLButtonElement>('[data-loop-sound]').forEach((btn) => {
+    const video = btn.closest('.loop')!.querySelector('video')!;
+    btn.addEventListener('click', () => {
+      video.muted = !video.muted;
+      if (!video.muted) video.play().catch(() => {});
+      btn.setAttribute('aria-pressed', String(!video.muted));
+      btn.textContent = video.muted ? 'Sound off' : 'Sound on';
+    });
+  });
+</script>

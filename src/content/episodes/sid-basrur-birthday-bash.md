@@ -2,13 +2,14 @@
 subject: Sid Basrur's Birthday Bash
 title: Live at The Raft
 series: scenes
-date: 2026-09-25
+date: 2026-09-18
 published: 2026-09-25
 city: Bangalore
 venue: The Raft
 summary: Sid Basrur brings in his birthday in the most punk way possible. Aye! play their first ever show, Runt their second, and Hoirong lose count.
 cover: Ddsnm3_k_Sg/05
 spotted: [aye, runt, hoirong, raft, oaf-records]
+heroClip: Ddsnm3_k_Sg/02
 instagram: [Ddsnm3_k_Sg]
 ---
 
