@@ -28,6 +28,14 @@ npm run build     # static site in dist/
    A clip ref is `<instagram shortcode>/<carousel index>` and points at `public/media/ig/<ref>.mp4|.jpg`.
 3. Regenerate the link-preview images: `.venv/bin/python scripts/make-brand.py`
 
+## Automatic updates
+
+Every day at noon IST, `.github/workflows/daily-tapes.yml` checks for new posts on Instagram and YouTube
+(via Apify). If there are any, Claude writes the tapes following `automation/tape-bot.md` (picking the
+cover and the homepage loop) and pushes to `main`, and Vercel deploys. Run it by hand from the repo's
+Actions tab. Posts it has handled or skipped are listed in `automation/seen.json`. If you add a tape by
+hand, add its post there too. Needs repo secrets `APIFY_TOKEN` and `ANTHROPIC_API_KEY`.
+
 ## Media — host as little as possible
 
 Full videos are **YouTube embeds** (poster-first: nothing loads from YouTube until someone presses play).

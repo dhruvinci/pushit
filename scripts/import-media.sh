@@ -7,7 +7,9 @@
 #   yt/<id>.jpg               YouTube poster frames
 # plus src/data/media.json, the manifest pages build from (so media can live on R2 instead of public/).
 #
-# Raw Instagram videos are cached in research/ig/raw (never deployed). Safe to re-run.
+# Raw Instagram videos are cached in research/ig/raw (never deployed). Safe to re-run, and incremental:
+# posts.json can hold just the new posts (as in the daily GitHub workflow, which starts with no cache)
+# and existing media and manifest entries are kept.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -63,14 +65,20 @@ for f in "$OUT"/loops/*/*.mp4; do
   [ -f "$f" ] && { [ -f "${f%.mp4}.jpg" ] || ff -i "$f" -frames:v 1 -q:v 4 "${f%.mp4}.jpg"; }
 done
 
-# 3. YouTube posters: channel videos + music videos Pushit shot (listed on /work)
-for id in $(cat research/yt/ids.txt) bp3LlRkgumI EXvQlhD1JmI pnaWZvTfwAM EVGBe0Tn1Cc; do
+# 3. YouTube posters: every video on a tape, plus the music videos Pushit shot (listed on /work)
+yt_ids() {
+  sed -n 's/^[[:space:]]*- id:[[:space:]]*\([A-Za-z0-9_-]\{11\}\).*/\1/p' src/content/episodes/*.md
+  jq -r '.[].youtube' src/data/work.json
+}
+for id in $(yt_ids | sort -u); do
   [ -f "$OUT/yt/$id.jpg" ] && continue
   fetch "https://i.ytimg.com/vi/$id/maxresdefault.jpg" "$OUT/yt/$id.jpg" \
     || fetch "https://i.ytimg.com/vi/$id/hqdefault.jpg" "$OUT/yt/$id.jpg" || echo "fail yt $id" >&2
 done
 
-# 4. Manifest: dimensions, whether a still is a video frame, and which loops exist
+# 4. Manifest: dimensions, whether a still is a video frame, and which loops exist.
+#    Without the raw video (a fresh checkout), a still keeps the video flag it already had.
+OLD=src/data/media.json
 dims() { ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=, "$1"; }
 has_audio() { [ -n "$(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$1")" ] && echo true || echo false; }
 {
@@ -78,7 +86,8 @@ has_audio() { [ -n "$(ffprobe -v error -select_streams a -show_entries stream=in
   sep=''
   for f in "$OUT"/ig/*/*.jpg; do
     ref=${f#"$OUT/ig/"}; ref=${ref%.jpg}
-    video=false; [ -f "$RAW/$ref.mp4" ] && video=true
+    if [ -f "$RAW/$ref.mp4" ]; then video=true
+    else video=$(jq -r --arg r "$ref" '.clips[$r].video // false' "$OLD"); fi
     IFS=, read -r w h <<<"$(dims "$f")"
     printf '%s\n    "%s": { "w": %s, "h": %s, "video": %s }' "$sep" "$ref" "$w" "$h" "$video"; sep=','
   done
@@ -91,5 +100,6 @@ has_audio() { [ -n "$(ffprobe -v error -select_streams a -show_entries stream=in
     printf '%s\n    "%s": { "w": %s, "h": %s, "audio": %s }' "$sep" "$ref" "$w" "$h" "$(has_audio "$f")"; sep=','
   done
   echo; echo '  } }'
-} > src/data/media.json
+} > src/data/media.json.tmp
+mv src/data/media.json.tmp src/data/media.json
 echo done

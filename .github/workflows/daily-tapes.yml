@@ -1,0 +1,73 @@
+# Every day at noon IST: look for new Pushit posts on Instagram and YouTube, and if there are any, have
+# Claude put them on the site (automation/tape-bot.md), build, and push to main so Vercel deploys.
+# Needs repo secrets APIFY_TOKEN and ANTHROPIC_API_KEY. Run it by hand from the Actions tab any time.
+name: Daily tapes
+
+on:
+  schedule:
+    - cron: '30 6 * * *' # 06:30 UTC = 12:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: daily-tapes
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check for new posts
+        id: check
+        run: node automation/check-new.mjs
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+
+      - name: Install tools
+        if: steps.check.outputs.found == 'true'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq ffmpeg
+          npm ci
+          python3 -m venv .venv && .venv/bin/pip install -q pillow
+
+      - name: Put the new posts on the site
+        if: steps.check.outputs.found == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Read automation/tape-bot.md and follow it. The new posts are in research/new.json.
+          claude_args: >-
+            --model claude-opus-5-5
+            --max-turns 150
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep"
+
+      - name: Build, commit and push
+        if: steps.check.outputs.found == 'true'
+        run: |
+          npm run build
+          node automation/check-new.mjs --mark-seen
+          git add -A
+          if git diff --cached --quiet; then echo "Nothing to commit"; exit 0; fi
+          # Commits go out under the site owner's name so Vercel deploys them like any other push.
+          git config user.name "0xdhruva"
+          git config user.email "0xdhruva@gmail.com"
+          if [ -s research/summary.md ]; then cp research/summary.md "$RUNNER_TEMP/msg"
+          else echo "Daily tapes: new posts" > "$RUNNER_TEMP/msg"; fi
+          printf '\n\nAutomated by .github/workflows/daily-tapes.yml (run %s)\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n' \
+            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> "$RUNNER_TEMP/msg"
+          git commit -q -F "$RUNNER_TEMP/msg"
+          git push
+          git log -1 --stat

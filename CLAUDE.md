@@ -42,6 +42,8 @@ npm run import-media         # rebuild public/media + src/data/media.json (needs
 
 **Homepage hero** always features the newest tape (`episodes[0]`): YouTube tapes play in `TapePlayer`; Instagram-only tapes show their `heroClip` loop (falls back to `cover`) and click through to the post. So an Instagram-only tape needs a `heroClip` picked (the user likes to choose it) plus a `loop-starts.txt` entry, then `npm run import-media`.
 
+**Daily automation** (`.github/workflows/daily-tapes.yml`, 12:00 IST): `automation/check-new.mjs` asks Apify for the latest Instagram posts and YouTube uploads and diffs them against `automation/seen.json`; if anything is new, Claude Code (claude-code-action, `claude-opus-5-5`) follows `automation/tape-bot.md` to add tapes, then the workflow builds, marks the items seen, and pushes to `main`. Items made into tapes by hand must be added to `seen.json` too, or the bot will redo them. `scripts/import-media.sh` must stay incremental: CI has no `research/` cache.
+
 **Layout/styling**: every page wraps `src/layouts/Base.astro` (meta, OG, JSON-LD, nav, fonts via `@fontsource`). Design tokens and shared styles live in `src/styles/global.css`. `TapePlayer.astro` / `YouTube.astro` are poster-first: nothing loads from YouTube until play.
 
 **Site-wide constants** (name, socials, contact email) in `src/site.ts`; setting `email` enables the enquiry form on `/work`.
