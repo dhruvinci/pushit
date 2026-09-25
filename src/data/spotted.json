@@ -27,6 +27,7 @@
   { "id": "akathyaa", "name": "Akathyaa", "kind": "band", "instagram": "akathyaa.band" },
   { "id": "barleyrasa", "name": "Barleyrasa", "kind": "band", "instagram": "barleyrasa" },
   { "id": "scyren", "name": "Scyren", "kind": "band", "instagram": "scyren.official" },
+  { "id": "aye", "name": "Aye!", "kind": "band" },
 
   { "id": "the-humming-tree", "name": "The Humming Tree", "kind": "venue", "city": "Bangalore", "instagram": "the_hummingtree" },
   { "id": "raft", "name": "The Raft", "kind": "venue", "city": "Bangalore" },
