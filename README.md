@@ -34,7 +34,8 @@ Every day at noon IST, `.github/workflows/daily-tapes.yml` checks for new posts 
 (via Apify). If there are any, Claude writes the tapes following `automation/tape-bot.md` (picking the
 cover and the homepage loop) and pushes to `main`, and Vercel deploys. Run it by hand from the repo's
 Actions tab. Posts it has handled or skipped are listed in `automation/seen.json`. If you add a tape by
-hand, add its post there too. Needs repo secrets `APIFY_TOKEN` and `ANTHROPIC_API_KEY`.
+hand, add its post there too. Needs repo secrets `APIFY_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN` (run `claude setup-token`; it uses your Claude
+subscription).
 
 ## Media — host as little as possible
 

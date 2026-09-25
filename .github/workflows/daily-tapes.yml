@@ -1,6 +1,6 @@
 # Every day at noon IST: look for new Pushit posts on Instagram and YouTube, and if there are any, have
 # Claude put them on the site (automation/tape-bot.md), build, and push to main so Vercel deploys.
-# Needs repo secrets APIFY_TOKEN and ANTHROPIC_API_KEY. Run it by hand from the Actions tab any time.
+# Needs repo secrets APIFY_TOKEN and CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`). Run it by hand from the Actions tab any time.
 name: Daily tapes
 
 on:
@@ -45,7 +45,7 @@ jobs:
         if: steps.check.outputs.found == 'true'
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             Read automation/tape-bot.md and follow it. The new posts are in research/new.json.
