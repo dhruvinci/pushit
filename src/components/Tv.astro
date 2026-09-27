@@ -65,7 +65,6 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     </div>
     <div class="tv__progress" aria-hidden="true"><span></span></div>
     <p class="tv__times"><span class="tv__elapsed"></span> <span class="tv__dur">{clock(now.show.duration)}</span></p>
-    <a class="arrow-link tv__link" href={now.show.href}>{now.show.tape ? `The tape: ${now.show.tape}` : 'See the work'}</a>
 
     <h2 class="kicker tv__next-head">Up next</h2>
     <ol class="tv__next">
@@ -81,12 +80,11 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
         ))
       }
     </ol>
-    <p class="tv__note">Every Pushit video, shuffled, around the clock. {tv.count} shows, {clock(tv.loop)} a loop.</p>
   </div>
 </section>
 
 <script>
-  import { loadYouTube, PLAYING, PAUSED, BUFFERING, CUED } from '../lib/youtube';
+  import { loadYouTube, PLAYING, PAUSED, BUFFERING, CUED, ENDED } from '../lib/youtube';
   import { schedule, type Show, type Slot } from '../lib/schedule';
 
   const DRIFT = 6; // seconds off schedule before we jump back to the live point
@@ -111,14 +109,19 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     const status = $('.tv__status'), soundBtn = $<HTMLButtonElement>('.tv__sound'), yt = $<HTMLAnchorElement>('.tv__yt');
     const clockEl = $('.tv__clock'), label = $('.tv__label'), subject = $('.tv__subject'), title = $('.tv__title');
     const bar = $('.tv__progress span'), elapsed = $('.tv__elapsed'), dur = $('.tv__dur');
-    const link = $<HTMLAnchorElement>('.tv__link'), nextList = $('.tv__next');
+    const nextList = $('.tv__next');
     const thumb = (show: Show) => poster.src.replace(/[^/]+\.jpg$/, `${show.id}.jpg`);
 
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const saveData = (navigator as any).connection?.saveData === true;
     const now = () => Date.now() / 1000;
 
-    let player: any, loaded = '', state = -1, muted = true, visible = true, shown = '';
+    let player: any, loaded = '', state = -1, settled = -1, muted = true, visible = true, shown = '';
+    // On phones YouTube flashes its own controls (a big pause button) for a few seconds whenever a video
+    // starts or ends, even with controls=0, and we can't reach into its frame. So the show's still covers
+    // the last couple of seconds and the first few of every show, like a TV cutting over.
+    const touch = matchMedia('(pointer: coarse)').matches;
+    let curtain: number | undefined;
     // Off until the browser lets it play: straight away normally; after a tap when autoplay is refused,
     // or for reduced motion / data saver, where the first tap switches it on with sound.
     let on = !reduced && !saveData;
@@ -150,10 +153,8 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
         subject.textContent = cur.show.subject;
         title.textContent = cur.show.title;
         dur.textContent = fmt(cur.show.duration);
-        link.href = cur.show.href;
-        link.textContent = cur.show.tape ? `The tape: ${cur.show.tape}` : 'See the work';
         yt.href = watch(cur.show.id);
-        if (!root.classList.contains('is-on')) poster.src = thumb(cur.show);
+        poster.src = thumb(cur.show);
         nextList.replaceChildren(
           ...upcoming.map((slot) => {
             const li = document.createElement('li');
@@ -182,6 +183,7 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 
     // --- keep the picture on schedule
     const sync = (cur: Slot) => {
+      if (touch && cur.end - now() < 2.5) root.classList.add('is-curtain');
       if (!player?.getPlayerState || !on) return;
       if (muted && !visible) return; // nobody watching or listening: rest
       if (cur.show.id !== loaded) {
@@ -199,6 +201,13 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     const onState = (e: { data: number }) => {
       state = e.data;
       root.classList.toggle('is-playing', state === PLAYING || state === BUFFERING);
+      if (state === PLAYING && settled !== PLAYING && touch) {
+        root.classList.add('is-curtain');
+        clearTimeout(curtain);
+        curtain = window.setTimeout(() => root.classList.remove('is-curtain'), 4000);
+      }
+      if (state !== BUFFERING) settled = state;
+      if (state === ENDED && touch) root.classList.add('is-curtain');
       if (state === PLAYING) {
         root.classList.add('is-on');
         root.classList.remove('is-off');
@@ -323,7 +332,7 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     transition: opacity 0.6s ease;
     pointer-events: none;
   }
-  .tv.is-on .tv__poster { opacity: 0; }
+  .tv.is-on:not(.is-curtain) .tv__poster { opacity: 0; }
   .tv__nojs {
     position: absolute;
     left: 1rem;
@@ -478,7 +487,6 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     color: var(--fg);
   }
   .tv__next :global(.tv__next-dur) { color: var(--dim); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
-  .tv__note { margin: 1rem 0 0; font-size: 0.72rem; color: var(--dim); }
 
   @media (max-width: 60rem) {
     .tv { grid-template-columns: 1fr; }
