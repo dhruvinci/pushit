@@ -52,12 +52,21 @@ export function schedule(roster: Show[]) {
     return a;
   };
   const orders = new Map<number, number[]>();
-  /** Loop k's running order. Never opens with the show that closed loop k-1. */
+  // Across a loop boundary, keep repeats apart: none of the first `gap` shows of a loop may be one of
+  // the last `gap` of the loop before. Fixes only swap with the middle of the loop, so every loop's
+  // closing shows are exactly its shuffle's and each loop can be worked out on its own.
+  const gap = Math.min(3, Math.floor(n / 3));
+  /** Loop k's running order. */
   const order = (k: number) => {
     let a = orders.get(k);
     if (!a) {
       a = shuffled(k);
-      if (n > 2 && a[0] === shuffled(k - 1)[n - 1]) [a[0], a[1]] = [a[1], a[0]];
+      const tail = new Set(shuffled(k - 1).slice(n - gap));
+      for (let i = 0; i < gap; i++) {
+        if (!tail.has(a[i])) continue;
+        const j = a.findIndex((s, j) => j >= gap && j < n - gap && !tail.has(s));
+        if (j >= 0) [a[i], a[j]] = [a[j], a[i]];
+      }
       orders.set(k, a);
     }
     return a;
