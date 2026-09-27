@@ -23,7 +23,8 @@ deploys it. So be careful, and leave the site as you'd want to find it.
 - **Add to an existing tape** when it's more of the same session: another rehearsal-tapes video from the
   same band and date joins that tape's `youtube:` list (see `runt-rehearsal-tapes.md`, two videos), and an
   Instagram teaser for a YouTube tape goes into that tape's `instagram:` list.
-- **A music video Pushit shot** belongs on the Work page (`src/data/work.json`), not in the tapes.
+- **A music video Pushit shot** belongs on the Work page (`src/data/work.json`), not in the tapes. Give it a
+  `duration` in seconds too: every YouTube video on the site airs on the homepage TV.
 - Otherwise **make a new tape**: one Markdown file per event or session.
 
 **Writing a tape.** Copy the shape of the closest existing tape (`oaf-big-gigs.md` and
@@ -39,7 +40,8 @@ The schema is `src/content.config.ts`.
   `bts`, `specials`.
 - `subject` is the big display name (band, event or person); `title` is the short headline
   ("Live at The Raft"); `summary` is one or two sentences.
-- `youtube:` entries take `id`, `title`, `duration` in seconds, and `chapters` (`t` "m:ss" + `label`)
+- `youtube:` entries take `id`, `title`, `duration` in seconds (required: the homepage TV schedules by it;
+  convert the scraper's "hh:mm:ss"), and `chapters` (`t` "m:ss" + `label`)
   when the description lists a setlist with timestamps.
 - `spotted:` Bands, artists, venues, promoters and labels from `src/data/spotted.json`. Match tagged or
   co-author Instagram handles to the `instagram` field, and names in the text. Add missing bands or venues
@@ -54,7 +56,7 @@ The schema is `src/content.config.ts`.
    same size:
    `ffmpeg -ss <sec> -i <raw> -frames:v 1 -vf "scale='min(1440,iw)':-2" -q:v 4 -y public/media/ig/<ref>.jpg`
 3. Pick the `cover`: a clear, well-lit, representative still.
-4. **Instagram-only tapes need a `heroClip`.** It's the 10 s loop that plays in the homepage hero while
+4. **Instagram-only tapes need a `heroClip`.** It's the 10 s loop that plays in the homepage tape log while
    this is the newest tape. Make frame strips of each video, one frame per 5 s:
    `ffmpeg -i <raw> -vf "fps=1/5,scale=240:-2,tile=8x1" -frames:v 1 <out>.jpg`, and look at them.
    Choose the most alive 10 s you can find: the band on stage, good light, crowd in frame, movement.
@@ -62,7 +64,7 @@ The schema is `src/content.config.ts`.
    <shortcode>/<nn>` in the tape and add `<shortcode>/<nn> <start seconds>` to `scripts/loop-starts.txt`.
 5. Run `npm run import-media` again. It cuts the loop and updates `src/data/media.json`.
 
-YouTube-only tapes don't need a `heroClip` (the hero plays the YouTube video), but
+YouTube-only tapes don't need a `heroClip` (the tape log plays the YouTube video), but
 `npm run import-media` still has to run to fetch the poster frame.
 
 ## Finish
@@ -75,7 +77,7 @@ YouTube-only tapes don't need a `heroClip` (the hero plays the YouTube video), b
 3. Don't commit or push; the workflow does that after you finish. Don't touch `automation/seen.json`
    either; the workflow marks everything in `research/new.json` as handled.
 4. Write a short plain-text summary to `research/summary.md`: what you added or skipped and why, which
-   still is the cover, and which clip and start time loop in the hero. Its first line is the commit
+   still is the cover, and which clip and start time loop in the tape log. Its first line is the commit
    subject (e.g. "New tape: Sid Basrur's birthday bash at The Raft"), the rest the commit body.
 
 Only change what these posts need. No redesigns, refactors or unrelated fixes; if you notice something

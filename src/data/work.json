@@ -6,6 +6,7 @@
     "kind": "Music video",
     "year": 2026,
     "youtube": "bp3LlRkgumI",
+    "duration": 245,
     "credits": [
       { "role": "Shot by", "names": "Pushit TV, Josh & the Vihaara film crew" }
     ],
@@ -19,6 +20,7 @@
     "kind": "Music video",
     "year": 2026,
     "youtube": "pnaWZvTfwAM",
+    "duration": 169,
     "credits": [
       { "role": "Directed by", "names": "Josh" },
       { "role": "Shot by", "names": "Angad & Josh" },
@@ -34,6 +36,7 @@
     "kind": "Music video",
     "year": 2026,
     "youtube": "EXvQlhD1JmI",
+    "duration": 55,
     "credits": [
       { "role": "Directed by", "names": "Josh" },
       { "role": "Shot by", "names": "Angad & Josh" },
@@ -49,6 +52,7 @@
     "kind": "Visualiser",
     "year": 2026,
     "youtube": "EVGBe0Tn1Cc",
+    "duration": 174,
     "credits": [
       { "role": "Visualiser by", "names": "Kaushal" },
       { "role": "Edited by", "names": "Angad" }

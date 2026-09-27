@@ -1,6 +1,6 @@
 # Pushit TV
 
-Website for [Pushit TV](https://www.instagram.com/pushit.tv/) — documenting the sick and the disturbed.
+Website for [Pushit TV](https://www.instagram.com/pushit.tv/) — scenes from the scene.
 A static [Astro](https://astro.build) site: every tape is a Markdown file, footage is self-hosted, full sets are YouTube embeds.
 
 ```sh

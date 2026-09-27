@@ -115,13 +115,19 @@ const clip = resolveClip(ref);
 
 <script>
   // Sound button: unmute (and make sure it's playing, even with reduced motion), or mute again.
+  // Only one thing plays with sound at a time: a loop with sound on hushes the others, and vice versa.
   document.querySelectorAll<HTMLButtonElement>('[data-loop-sound]').forEach((btn) => {
     const video = btn.closest('.loop')!.querySelector('video')!;
-    btn.addEventListener('click', () => {
-      video.muted = !video.muted;
-      if (!video.muted) video.play().catch(() => {});
-      btn.setAttribute('aria-pressed', String(!video.muted));
-      btn.textContent = video.muted ? 'Sound off' : 'Sound on';
-    });
+    const setMuted = (m: boolean) => {
+      video.muted = m;
+      if (!m) {
+        video.play().catch(() => {});
+        document.dispatchEvent(new CustomEvent('pushit:play', { detail: video }));
+      }
+      btn.setAttribute('aria-pressed', String(!m));
+      btn.textContent = m ? 'Sound off' : 'Sound on';
+    };
+    btn.addEventListener('click', () => setMuted(!video.muted));
+    document.addEventListener('pushit:play', (e) => (e as CustomEvent).detail !== video && !video.muted && setMuted(true));
   });
 </script>

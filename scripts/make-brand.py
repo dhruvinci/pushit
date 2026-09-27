@@ -163,11 +163,11 @@ def stamp(iso):
 def make_og():
     og = PUBLIC / "og"
     hero = PUBLIC / "media/ig/DaVcpQwj-3d/07.jpg"  # Incantation, Bangalore Death Fest
-    card(og / "default.jpg", "Documenting the sick and the disturbed.", "Pushit TV", image=hero)
+    card(og / "default.jpg", "Scenes from the Scene.", "Pushit TV", image=hero)
     card(og / "log.jpg", "The tape log", "Archive", "Every rehearsal tape, scene diary and portrait.", image=PUBLIC / "media/ig/DYfEd_pjyA5/03.jpg")
     card(og / "spotted.jpg", "Spotted", "Mom, I'm on TV", "Everyone who's been caught on a Pushit tape.", image=PUBLIC / "media/ig/DYT8l99DolN/05.jpg")
     card(og / "work.jpg", "We make music videos", "Commissions open", "Godless. Maneating Orchid. Whoever's next.", image=PUBLIC / "media/yt/pnaWZvTfwAM.jpg")
-    card(og / "about.jpg", "About Pushit TV", "About", "Documenting the sick and the disturbed.", image=PUBLIC / "media/ig/DXn00PVD-no/00.jpg")
+    card(og / "about.jpg", "About Pushit TV", "About", "Scenes from the Scene.", image=PUBLIC / "media/ig/DXn00PVD-no/00.jpg")
 
     for md in sorted((ROOT / "src/content/episodes").glob("*.md")):
         fm = frontmatter(md)

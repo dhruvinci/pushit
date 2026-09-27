@@ -1,0 +1,230 @@
+---
+// The homepage tape log: one tape featured, with a playlist rail of the rest underneath.
+// It opens on the newest tape; picking another from the rail swaps it in (the rail items are plain
+// links to the tapes, so it all still works without JS). Nothing here autoplays: the TV above is on.
+import TapePlayer from './TapePlayer.astro';
+import LoopVideo from './LoopVideo.astro';
+import { SERIES, stamp, runtime, coverSrc, type NumberedEpisode } from '../lib/episodes';
+
+interface Props {
+  episodes: NumberedEpisode[]; // newest first; the first is featured
+}
+const { episodes } = Astro.props;
+const newest = episodes[0].id;
+---
+
+<div class="deck" data-deck>
+  <div class="deck__stage">
+    {
+      episodes.map((ep, i) => {
+        const hasTape = ep.data.youtube.length > 0;
+        const heroRef = ep.data.heroClip ?? (ep.data.cover.startsWith('/') ? undefined : ep.data.cover);
+        const instagram = ep.data.instagram[0] ? `https://www.instagram.com/p/${ep.data.instagram[0]}/` : undefined;
+        // Shrink the name until its longest word fits the column rather than break mid-word
+        const longestWord = Math.max(...ep.data.subject.split(/\s+/).map((w) => w.length));
+        return (
+          <article class="feature" data-feature={ep.id} hidden={i !== 0} aria-labelledby={`feature-${ep.id}`}>
+            <div class="feature__media">
+              {hasTape ? (
+                <TapePlayer videos={ep.data.youtube} label={SERIES[ep.data.series].code} compact autoplay={false} lazy={i !== 0} />
+              ) : heroRef ? (
+                <LoopVideo ref={heroRef} label={SERIES[ep.data.series].code} timecode={stamp(ep.data.date)} href={instagram} />
+              ) : (
+                <a href={instagram ?? `/tapes/${ep.id}/`}>
+                  <img src={coverSrc(ep.data.cover)} alt="" loading={i === 0 ? undefined : 'lazy'} />
+                </a>
+              )}
+            </div>
+            <div class="feature__text">
+              <p class="rec">{ep.id === newest ? 'Newest tape' : 'From the log'} · {ep.tape}</p>
+              <p class="feature__stamp stamp">
+                {stamp(ep.data.date)} — {SERIES[ep.data.series].label}
+              </p>
+              <h3 id={`feature-${ep.id}`} class="display feature__subject" style={`--chars: ${longestWord}`}>
+                {ep.data.subject}
+              </h3>
+              <p class="headline">{ep.data.title}</p>
+              <p class="feature__summary">{ep.data.summary}</p>
+              <div class="feature__actions">
+                {hasTape || !instagram ? (
+                  <a class="btn btn--red" href={`/tapes/${ep.id}/`}>▶ Watch the tape</a>
+                ) : (
+                  <>
+                    <a class="btn btn--red" href={instagram} rel="noopener">▶ Watch on Instagram</a>
+                    <a class="arrow-link" href={`/tapes/${ep.id}/`}>The full diary</a>
+                  </>
+                )}
+              </div>
+            </div>
+          </article>
+        );
+      })
+    }
+  </div>
+
+  <div class="deck__rail">
+    <ol class="deck__list" aria-label="Tapes">
+      {
+        episodes.map((ep, i) => (
+          <li>
+            <a href={`/tapes/${ep.id}/`} data-pick={ep.id} aria-current={i === 0 ? 'true' : undefined}>
+              <span class="deck__thumb">
+                <img src={coverSrc(ep.data.cover)} alt="" loading="lazy" decoding="async" />
+                <span class="deck__tape">{ep.tape}</span>
+              </span>
+              <span class="deck__subject">{ep.data.subject}</span>
+              <span class="deck__meta">
+                <span class="stamp">{stamp(ep.data.date)}</span> {runtime(ep)}
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+    <div class="deck__nav" hidden>
+      <button type="button" data-step="-1" aria-label="Scroll back">←</button>
+      <button type="button" data-step="1" aria-label="Scroll on">→</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  for (const deck of document.querySelectorAll<HTMLElement>('[data-deck]')) {
+    const features = [...deck.querySelectorAll<HTMLElement>('[data-feature]')];
+    const picks = [...deck.querySelectorAll<HTMLAnchorElement>('[data-pick]')];
+    const list = deck.querySelector<HTMLElement>('.deck__list')!;
+    const stage = deck.querySelector<HTMLElement>('.deck__stage')!;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const show = (id: string) => {
+      for (const f of features) {
+        const on = f.dataset.feature === id;
+        // Stop whatever the outgoing tape was playing
+        if (!on && !f.hidden) f.querySelectorAll('[data-tape-player]').forEach((p) => p.dispatchEvent(new Event('tape:pause')));
+        f.hidden = !on;
+      }
+      for (const a of picks) a.toggleAttribute('aria-current', a.dataset.pick === id);
+      if (stage.getBoundingClientRect().top < 0) stage.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    };
+
+    for (const a of picks) {
+      a.addEventListener('click', (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return; // new tab etc.
+        e.preventDefault();
+        show(a.dataset.pick!);
+      });
+    }
+
+    const nav = deck.querySelector<HTMLElement>('.deck__nav')!;
+    const [back, on] = nav.querySelectorAll('button');
+    const update = () => {
+      back.disabled = list.scrollLeft <= 1;
+      on.disabled = list.scrollLeft + list.clientWidth >= list.scrollWidth - 1;
+      nav.hidden = back.disabled && on.disabled;
+    };
+    for (const b of [back, on])
+      b.addEventListener('click', () =>
+        list.scrollBy({ left: Number(b.dataset.step) * list.clientWidth * 0.8, behavior: reduced ? 'auto' : 'smooth' }),
+      );
+    list.addEventListener('scroll', update, { passive: true });
+    new ResizeObserver(update).observe(list);
+  }
+</script>
+
+<style>
+  .feature {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
+    gap: clamp(1.5rem, 4vw, 4rem);
+    align-items: center;
+  }
+  .feature__media img { width: 100%; }
+  .feature__text { container-type: inline-size; }
+  .feature__stamp { margin: 1.2rem 0 0.8rem; font-size: 0.85rem; }
+  /* Anton caps run about 0.5em wide; wide ones (M, W) more, hence the margin */
+  .feature__subject {
+    font-size: min(clamp(3rem, 9vw, 7.5rem), 100cqi / (var(--chars) * 0.56));
+    margin-bottom: 1rem;
+    overflow-wrap: anywhere;
+  }
+  .feature__summary { color: var(--dim); max-width: 44ch; margin: 1rem 0 1.8rem; font-size: 0.9rem; }
+  .feature__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
+
+  .deck__rail { margin-top: clamp(2rem, 4vw, 3rem); }
+  .deck__list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0.75rem;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: clamp(11rem, 22%, 15rem);
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule) transparent;
+  }
+  .deck__list li { scroll-snap-align: start; }
+  .deck__list a {
+    display: block;
+    height: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--rule);
+    text-decoration: none;
+  }
+  .deck__list a:hover { border-color: var(--fg); color: var(--fg); }
+  .deck__list a[aria-current] { border-color: var(--red); }
+  .deck__thumb {
+    display: block;
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .deck__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(1) contrast(1.15);
+    transition: filter 0.25s;
+  }
+  .deck__list a:hover img,
+  .deck__list a[aria-current] img { filter: none; }
+  .deck__tape {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    font: 500 0.62rem/1 var(--mono);
+    letter-spacing: 0.12em;
+    background: var(--bg);
+    padding: 0.35em 0.5em;
+  }
+  .deck__list a[aria-current] .deck__tape { background: var(--red); color: var(--bg); }
+  .deck__subject {
+    display: block;
+    margin-top: 0.6rem;
+    font: 400 1.2rem/1 var(--display);
+    text-transform: uppercase;
+  }
+  .deck__meta { display: block; margin-top: 0.35rem; font-size: 0.7rem; color: var(--dim); }
+  .deck__meta .stamp { margin-right: 0.3em; }
+
+  .deck__nav { display: flex; justify-content: flex-end; gap: 0.4rem; margin-top: 0.5rem; }
+  .deck__nav button {
+    font: 500 1rem/1 var(--mono);
+    width: 2.6rem;
+    height: 2.2rem;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--rule);
+    cursor: pointer;
+  }
+  .deck__nav button:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+  .deck__nav button:disabled { opacity: 0.35; cursor: default; }
+
+  @media (max-width: 52rem) {
+    .feature { grid-template-columns: 1fr; }
+    .deck__list { grid-auto-columns: 62%; }
+  }
+</style>

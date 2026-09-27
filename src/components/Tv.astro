@@ -1,0 +1,505 @@
+---
+// Pushit TV, the channel: every YouTube video on the site, shuffled, airing around the clock on the homepage.
+// The schedule (src/lib/schedule.ts) is worked out from the clock, so every visitor sees the same show.
+//
+// It opens as a muted live feed, like a TV left on in a bar. YouTube only counts a view when playback
+// starts from its own play button, so "tap for sound" swaps in YouTube's own player, cued at the live
+// moment; pressing its play button tunes in with sound (and counts). From then on it's a normal YouTube
+// player that we keep on schedule. Without JS: the current show's poster, linking to YouTube.
+import { getCollection } from 'astro:content';
+import { getEpisodes, SERIES, ytThumb, clock } from '../lib/episodes';
+import { schedule, type Show } from '../lib/schedule';
+
+const episodes = await getEpisodes();
+const artists = new Map((await getCollection('spotted')).map((s) => [s.id, s.data.name]));
+const roster: Show[] = [
+  ...episodes.flatMap((ep) =>
+    ep.data.youtube.map((v) => ({
+      id: v.id,
+      duration: v.duration,
+      subject: ep.data.subject,
+      title: v.title,
+      label: SERIES[ep.data.series].label,
+      href: `/tapes/${ep.id}/`,
+      tape: ep.tape,
+    })),
+  ),
+  ...(await getCollection('work')).map((w) => ({
+    id: w.data.youtube,
+    duration: w.data.duration,
+    subject: artists.get(w.data.artist.id) ?? w.data.artist.id,
+    title: w.data.title,
+    label: w.data.kind,
+    href: '/work/',
+  })),
+];
+const tv = schedule(roster);
+// What's on at build time: only seen without JS, which then shows it as a poster.
+const [now, ...next] = tv.at(Date.now() / 1000, 3);
+const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
+---
+
+<section class="tv" data-tv data-roster={JSON.stringify(roster)} aria-label="Pushit TV, on air">
+  <div class="tv__set">
+    <div class="tv__screen">
+      <div class="tv__frame"><div class="tv__mount"></div></div>
+      <img class="tv__poster" src={ytThumb(now.show.id)} alt="" width="1280" height="720" fetchpriority="high" />
+      <a class="tv__nojs" href={watch(now.show.id)}>▶ Watch on YouTube</a>
+      <div class="tv__hud" aria-hidden="true">
+        <span class="tv__onair"><i></i>On air</span>
+        <span class="tv__clock"></span>
+      </div>
+      <button class="tv__tap" type="button" hidden><span>Tap for sound</span></button>
+    </div>
+    <p class="tv__status" hidden>
+      <span class="tv__status-text"></span>
+      <a class="tv__yt" href={watch(now.show.id)} rel="noopener">Watch on YouTube</a>
+    </p>
+  </div>
+
+  <div class="tv__guide">
+    <p class="kicker tv__kicker"><span class="rec">Now playing</span> <span class="tv__label">{now.show.label}</span></p>
+    <div aria-live="polite">
+      <p class="display tv__subject">{now.show.subject}</p>
+      <p class="headline tv__title">{now.show.title}</p>
+    </div>
+    <div class="tv__progress" aria-hidden="true"><span></span></div>
+    <p class="tv__times"><span class="tv__elapsed"></span> <span class="tv__dur">{clock(now.show.duration)}</span></p>
+    <a class="arrow-link tv__link" href={now.show.href}>{now.show.tape ? `The tape: ${now.show.tape}` : 'See the work'}</a>
+
+    <h2 class="kicker tv__next-head">Up next</h2>
+    <ol class="tv__next">
+      {
+        next.map((slot) => (
+          <li>
+            <time class="stamp" />
+            <span class="tv__next-show">
+              <b>{slot.show.subject}</b> {slot.show.title}
+            </span>
+            <span class="tv__next-dur">{clock(slot.show.duration)}</span>
+          </li>
+        ))
+      }
+    </ol>
+    <p class="tv__note">Every Pushit video, shuffled, around the clock. {tv.count} shows, {clock(tv.loop)} a loop.</p>
+  </div>
+</section>
+
+<script>
+  import { loadYouTube, PLAYING, PAUSED, BUFFERING, CUED } from '../lib/youtube';
+  import { schedule, type Show, type Slot } from '../lib/schedule';
+
+  const UNSTARTED = -1;
+  const DRIFT = 6; // seconds off schedule before we jump back to the live point
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const fmt = (s: number) => {
+    s = Math.max(0, Math.floor(s));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
+  };
+  const hhmm = (t: number) => new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const hhmmss = (t: number) =>
+    new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
+  const thumb = (show: Show) => (document.querySelector('.tv__poster') as HTMLImageElement).src.replace(/[^/]+\.jpg$/, `${show.id}.jpg`);
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-tv]')) setup(root);
+
+  function setup(root: HTMLElement) {
+    const tv = schedule(JSON.parse(root.dataset.roster!));
+    const $ = <T extends Element = HTMLElement>(sel: string) => root.querySelector(sel) as T;
+    const frame = $('.tv__frame'), poster = $<HTMLImageElement>('.tv__poster'), tap = $<HTMLButtonElement>('.tv__tap');
+    const status = $('.tv__status'), statusText = $('.tv__status-text'), yt = $<HTMLAnchorElement>('.tv__yt');
+    const clockEl = $('.tv__clock'), label = $('.tv__label'), subject = $('.tv__subject'), title = $('.tv__title');
+    const bar = $('.tv__progress span'), elapsed = $('.tv__elapsed'), dur = $('.tv__dur');
+    const link = $<HTMLAnchorElement>('.tv__link'), nextList = $('.tv__next');
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const saveData = (navigator as any).connection?.saveData === true;
+    const now = () => Date.now() / 1000;
+
+    // muted: our own chromeless feed. native: YouTube's player, waiting for (then after) its play button.
+    let mode: 'muted' | 'native' = 'muted';
+    let player: any, loaded = '', state = UNSTARTED, tunedIn = false, userPaused = false, visible = true;
+    let shown = '';
+
+    root.classList.add('has-js');
+    status.hidden = false;
+
+    const setStatus = () => {
+      statusText.textContent =
+        mode === 'muted'
+          ? 'Sound off. Tap the screen to tune in.'
+          : tunedIn
+            ? "Sound on. You're watching live."
+            : 'Press ▶ on the screen to tune in with sound.';
+    };
+
+    // --- the guide: now playing, up next, the clock
+    const guide = (): Slot => {
+      const t = now();
+      const [cur, ...upcoming] = tv.at(t, 3);
+      if (cur.show.id !== shown) {
+        shown = cur.show.id;
+        label.textContent = cur.show.label;
+        subject.textContent = cur.show.subject;
+        title.textContent = cur.show.title;
+        dur.textContent = fmt(cur.show.duration);
+        link.href = cur.show.href;
+        link.textContent = cur.show.tape ? `The tape: ${cur.show.tape}` : 'See the work';
+        yt.href = watch(cur.show.id);
+        if (!root.classList.contains('is-on')) poster.src = thumb(cur.show);
+        nextList.replaceChildren(
+          ...upcoming.map((slot) => {
+            const li = document.createElement('li');
+            const time = document.createElement('time');
+            time.className = 'stamp';
+            time.dateTime = new Date(slot.start * 1000).toISOString();
+            time.textContent = hhmm(slot.start);
+            const name = document.createElement('span');
+            name.className = 'tv__next-show';
+            const b = document.createElement('b');
+            b.textContent = slot.show.subject;
+            name.append(b, ` ${slot.show.title}`);
+            const d = document.createElement('span');
+            d.className = 'tv__next-dur';
+            d.textContent = fmt(slot.show.duration);
+            li.append(time, name, d);
+            return li;
+          }),
+        );
+      }
+      bar.style.width = `${(cur.offset / cur.show.duration) * 100}%`;
+      elapsed.textContent = `${fmt(cur.offset)} /`;
+      clockEl.textContent = hhmmss(t);
+      return cur;
+    };
+
+    // --- keep the player on schedule
+    const sync = (cur: Slot) => {
+      if (!player?.getPlayerState) return;
+      if (mode === 'native' && !tunedIn) {
+        // Waiting on YouTube's play button: keep the right show cued.
+        if (cur.show.id !== loaded) (player.cueVideoById({ videoId: cur.show.id, startSeconds: Math.floor(cur.offset) }), (loaded = cur.show.id));
+        return;
+      }
+      if (userPaused || (mode === 'muted' && !visible)) return;
+      if (cur.show.id !== loaded) {
+        player.loadVideoById({ videoId: cur.show.id, startSeconds: cur.offset });
+        loaded = cur.show.id;
+      } else if (state === PLAYING) {
+        if (Math.abs(player.getCurrentTime() - cur.offset) > DRIFT) player.seekTo(cur.offset, true);
+      } else if (state === PAUSED || state === CUED) {
+        player.seekTo(cur.offset, true);
+        player.playVideo();
+      }
+      // ENDED: our timing ran a second long; the next show loads when its slot starts.
+    };
+
+    const onState = (e: { data: number }) => {
+      state = e.data;
+      root.classList.toggle('is-playing', state === PLAYING || state === BUFFERING);
+      if (state === PLAYING) {
+        root.classList.add('is-on');
+        userPaused = false;
+        if (mode === 'native') {
+          if (!tunedIn) (tunedIn = true), setStatus();
+          document.dispatchEvent(new CustomEvent('pushit:play', { detail: root }));
+        }
+        sync(guide()); // e.g. back from a pause: jump to the live point
+      }
+      if (state === PAUSED && mode === 'native' && tunedIn) userPaused = true;
+    };
+
+    const mount = () => {
+      const el = document.createElement('div');
+      frame.replaceChildren(el);
+      return el;
+    };
+
+    const tuneMuted = () =>
+      loadYouTube().then((YT) => {
+        if (mode !== 'muted') return; // tapped for sound before the API arrived
+        const cur = guide();
+        loaded = cur.show.id;
+        player = new YT.Player(mount(), {
+          host: 'https://www.youtube-nocookie.com',
+          videoId: cur.show.id,
+          playerVars: {
+            autoplay: 1, mute: 1, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3,
+            playsinline: 1, cc_load_policy: 0, start: Math.floor(cur.offset), origin: location.origin,
+          },
+          events: {
+            onReady: () => (player.mute(), player.playVideo()),
+            onStateChange: onState,
+            onAutoplayBlocked: () => tuneNative(),
+          },
+        });
+        // Autoplay can be refused without the event firing (iOS low power mode): go straight to YouTube's button.
+        setTimeout(() => mode === 'muted' && !root.classList.contains('is-on') && tuneNative(), 5000);
+      });
+
+    const tuneNative = () => {
+      if (mode === 'native') return;
+      mode = 'native';
+      player?.destroy?.();
+      player = undefined;
+      tap.hidden = true;
+      root.classList.remove('is-on', 'is-playing');
+      root.classList.add('is-native');
+      setStatus();
+      loadYouTube().then((YT) => {
+        const cur = guide();
+        loaded = cur.show.id;
+        player = new YT.Player(mount(), {
+          host: 'https://www.youtube-nocookie.com',
+          videoId: cur.show.id,
+          playerVars: { autoplay: 0, rel: 0, iv_load_policy: 3, playsinline: 1, start: Math.floor(cur.offset), origin: location.origin },
+          events: {
+            onReady: () => root.classList.add('is-ready'),
+            onStateChange: onState,
+          },
+        });
+      });
+    };
+
+    tap.addEventListener('click', tuneNative);
+
+    // Something else started playing with sound: step aside. A muted feed doesn't compete.
+    document.addEventListener('pushit:play', (e) => {
+      if ((e as CustomEvent).detail === root || mode !== 'native' || !tunedIn) return;
+      if (state === PLAYING || state === BUFFERING) player.pauseVideo();
+    });
+
+    // The muted feed rests when nobody can see it and picks up the live point on return.
+    const rest = () => {
+      if (mode === 'muted' && !visible && player?.pauseVideo && (state === PLAYING || state === BUFFERING)) player.pauseVideo();
+    };
+    let onScreen = true;
+    new IntersectionObserver(
+      ([entry]) => {
+        onScreen = entry.isIntersecting;
+        visible = onScreen && !document.hidden;
+        rest();
+      },
+      { threshold: 0.2 },
+    ).observe($('.tv__screen'));
+    document.addEventListener('visibilitychange', () => {
+      visible = onScreen && !document.hidden;
+      rest();
+    });
+
+    setInterval(() => sync(guide()), 1000);
+    guide();
+    if (reduced || saveData) tuneNative();
+    else {
+      tap.hidden = false;
+      setStatus();
+      tuneMuted();
+    }
+  }
+</script>
+
+<style>
+  .tv {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 3vw, 2.75rem);
+    align-items: start;
+  }
+
+  /* screen */
+  .tv__screen {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+  }
+  .tv__frame {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  /* The muted feed is cropped like the tape player: twice as tall and centred, so YouTube's title bar
+     and branding sit out of frame. YouTube's own player (native) is shown whole and takes clicks. */
+  .tv__frame :global(iframe) {
+    position: absolute;
+    left: 0;
+    top: -50%;
+    width: 100%;
+    height: 200%;
+    border: 0;
+    pointer-events: none;
+  }
+  .tv.is-native .tv__frame :global(iframe) {
+    top: 0;
+    height: 100%;
+    pointer-events: auto;
+  }
+  .tv__poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  .tv.is-on .tv__poster,
+  .tv.is-ready .tv__poster { opacity: 0; }
+  .tv__nojs {
+    position: absolute;
+    left: 1rem;
+    bottom: 1rem;
+    font: 500 0.8rem/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: var(--red);
+    color: var(--bg);
+    padding: 0.9em 1.2em;
+    text-decoration: none;
+  }
+  .tv.has-js .tv__nojs { display: none; }
+
+  .tv__hud {
+    position: absolute;
+    inset: 0.9rem 1rem auto;
+    display: flex;
+    justify-content: space-between;
+    font: 500 0.75rem/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg);
+    text-shadow: 0 1px 3px #000;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .tv.is-native .tv__hud { display: none; } /* YouTube's own title bar is up there now */
+  .tv__onair { display: inline-flex; align-items: center; gap: 0.45em; }
+  .tv__onair i {
+    width: 0.62em;
+    height: 0.62em;
+    border-radius: 50%;
+    background: var(--red);
+  }
+  .tv.is-playing .tv__onair i { animation: blink 1.4s steps(2, jump-none) infinite; }
+  .tv__clock { font-variant-numeric: tabular-nums; }
+
+  .tv__tap {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    z-index: 3;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: end;
+    justify-content: end;
+    padding: 1rem;
+  }
+  .tv__tap span {
+    font: 500 0.72rem/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg);
+    padding: 0.8em 1em;
+    background: rgb(11 11 10 / 0.75);
+    border: 1px solid rgb(236 235 230 / 0.35);
+    animation: hint 2.4s ease-in-out infinite;
+  }
+  .tv__tap:hover span,
+  .tv__tap:focus-visible span { background: var(--red); border-color: var(--red); color: var(--bg); animation: none; }
+  @keyframes hint { 50% { border-color: var(--red); } }
+
+  .tv__status {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin: 0;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--rule);
+    border-top: 0;
+    background: var(--bg-2);
+    font: 500 0.72rem/1.3 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .tv__status-text { color: var(--dim); }
+  .tv.is-native:not(.is-playing) .tv__status-text { color: var(--red); }
+  .tv__yt { color: var(--dim); text-decoration: none; }
+  .tv__yt:hover { color: var(--red); }
+
+  /* guide */
+  .tv__guide { container-type: inline-size; }
+  .tv__kicker { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: center; }
+  .tv__kicker .rec { color: var(--fg); }
+  .tv__subject {
+    font-size: clamp(2.6rem, 16cqi, 5.5rem);
+    margin: 1rem 0 0.7rem;
+    overflow-wrap: anywhere;
+  }
+  .tv__title { font-size: clamp(1.15rem, 2vw, 1.5rem); }
+  .tv__progress {
+    height: 3px;
+    background: var(--rule);
+    margin: 1.4rem 0 0.6rem;
+  }
+  .tv__progress span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--red);
+    transition: width 1s linear;
+  }
+  .tv__times {
+    margin: 0 0 1.2rem;
+    font-size: 0.75rem;
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tv__next-head {
+    margin-top: 2.2rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .tv__next {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  /* Rows are rebuilt by the script, so they don't carry Astro's scoping attribute: style them globally. */
+  .tv__next :global(li) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.9rem;
+    align-items: baseline;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+  .tv__next :global(time) { font-size: 0.8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tv__next :global(.tv__next-show) { color: var(--dim); }
+  .tv__next :global(b) {
+    display: block;
+    font: 400 1.15rem/1.05 var(--display);
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+  .tv__next :global(.tv__next-dur) { color: var(--dim); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+  .tv__note { margin: 1rem 0 0; font-size: 0.72rem; color: var(--dim); }
+
+  @media (max-width: 60rem) {
+    .tv { grid-template-columns: 1fr; }
+    .tv__subject { font-size: clamp(2.6rem, 12vw, 4.5rem); }
+  }
+  @media (max-width: 40rem) {
+    .tv__hud { inset: 0.6rem 0.7rem auto; font-size: 0.65rem; }
+    .tv__tap { padding: 0.6rem; }
+  }
+</style>

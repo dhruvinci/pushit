@@ -7,7 +7,7 @@ export const SERIES = ['rehearsal-tapes', 'scenes', 'portraits', 'bts', 'special
 const youtube = z.object({
   id: z.string(),
   title: z.string(),
-  duration: z.number().optional(), // seconds
+  duration: z.number(), // seconds; required: the homepage TV schedules by it
   // "mm:ss" or "h:mm:ss" chapter marks, shown as a clickable setlist
   chapters: z.array(z.object({ t: z.string(), label: z.string() })).default([]),
 });
@@ -55,6 +55,7 @@ const work = defineCollection({
     kind: z.string(), // "Music video", "Visualiser"
     year: z.number(),
     youtube: z.string(),
+    duration: z.number(), // seconds, for the homepage TV schedule
     credits: z.array(z.object({ role: z.string(), names: z.string() })),
     note: z.string().optional(),
     bts: reference('episodes').optional(),

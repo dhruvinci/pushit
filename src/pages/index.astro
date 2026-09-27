@@ -1,61 +1,23 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import TapeLog from '../components/TapeLog.astro';
+import Tv from '../components/Tv.astro';
+import TapeDeck from '../components/TapeDeck.astro';
 import EpisodeCard from '../components/EpisodeCard.astro';
-import TapePlayer from '../components/TapePlayer.astro';
-import LoopVideo from '../components/LoopVideo.astro';
-import { getEpisodes, SERIES, stamp, ytThumb, coverSrc } from '../lib/episodes';
+import { getEpisodes, ytThumb } from '../lib/episodes';
 import { SITE } from '../site';
 
 const episodes = await getEpisodes();
-// The newest tape leads the hero: its YouTube video plays in the tape player, or, for an
-// Instagram-only tape, its heroClip loops silently and clicking through opens the post.
-const latest = episodes[0];
-const hasTape = latest.data.youtube.length > 0;
-const heroRef = latest.data.heroClip ?? (latest.data.cover.startsWith('/') ? undefined : latest.data.cover);
-// Shrink the headline until its longest word fits the column rather than break mid-word
-const longestWord = Math.max(...latest.data.subject.split(/\s+/).map((w) => w.length));
-const instagram = latest.data.instagram[0] ? `https://www.instagram.com/p/${latest.data.instagram[0]}/` : undefined;
 const diaries = episodes.filter((ep) => ep.data.series === 'scenes' || ep.data.series === 'specials').slice(0, 3);
 const work = await getCollection('work');
 const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === 'band' || s.data.kind === 'artist');
 ---
 
 <Base>
-  <section class="hero wrap">
-    <div class="hero__text">
-      <p class="rec">Now showing · {latest.tape}</p>
-      <p class="hero__stamp stamp">{stamp(latest.data.date)} — {SERIES[latest.data.series].label}</p>
-      <h1 class="display display--xl hero__title" style={`--chars: ${longestWord}`}>{latest.data.subject}</h1>
-      <p class="headline">{latest.data.title}</p>
-      <p class="hero__summary">{latest.data.summary}</p>
-      <div class="hero__actions">
-        {
-          hasTape || !instagram ? (
-            <a class="btn btn--red" href={`/tapes/${latest.id}/`}>▶ Watch the tape</a>
-          ) : (
-            <>
-              <a class="btn btn--red" href={instagram} rel="noopener">▶ Watch on Instagram</a>
-              <a class="arrow-link" href={`/tapes/${latest.id}/`}>The full diary</a>
-            </>
-          )
-        }
-        <a class="arrow-link" href="/log/">All tapes</a>
-      </div>
-    </div>
-    <div class="hero__video">
-      {
-        hasTape ? (
-          <TapePlayer videos={latest.data.youtube} label={SERIES[latest.data.series].code} compact />
-        ) : heroRef ? (
-          <LoopVideo ref={heroRef} label={SERIES[latest.data.series].code} timecode={stamp(latest.data.date)} href={instagram} />
-        ) : (
-          <a href={instagram ?? `/tapes/${latest.id}/`}><img src={coverSrc(latest.data.cover)} alt="" /></a>
-        )
-      }
-    </div>
-  </section>
+  <h1 class="sr-only">{SITE.name}: {SITE.tagline}</h1>
+  <div class="wrap hero">
+    <Tv />
+  </div>
 
   <div class="marquee" aria-hidden="true">
     <div class="marquee__track">
@@ -68,21 +30,20 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
       }
     </div>
   </div>
-  <p class="sr-only">{SITE.tagline}</p>
 
-  <section class="wrap block">
+  <section class="wrap block block--log">
     <div class="section-head">
       <h2 class="display display--m">The tape log</h2>
       <a class="arrow-link" href="/log/">Full log</a>
     </div>
-    <TapeLog episodes={episodes.slice(0, 6)} />
+    <TapeDeck episodes={episodes.slice(0, 12)} />
   </section>
 
   <section class="wrap block">
     <div class="section-head">
       <div>
-        <p class="kicker">Gig diaries</p>
-        <h2 class="display display--m">Scenes from the scene</h2>
+        <p class="kicker">Scenes From The Scene</p>
+        <h2 class="display display--m">Gig diaries</h2>
       </div>
       <a class="arrow-link" href="/log/#scenes">Every diary</a>
     </div>
@@ -139,21 +100,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
 </Base>
 
 <style>
-  .hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-    gap: clamp(1.5rem, 4vw, 4rem);
-    align-items: end;
-    padding-block: clamp(2rem, 6vw, 5rem) clamp(2rem, 5vw, 4rem);
-  }
-  .hero__stamp { margin: 1.4rem 0 0.8rem; font-size: 0.85rem; }
-  .hero h1 { margin-bottom: 1.2rem; overflow-wrap: anywhere; }
-  .hero__text { container-type: inline-size; }
-  /* Anton caps run about 0.5em wide; wide ones (M, W) more, hence the margin */
-  .hero__title { font-size: min(clamp(3.6rem, 13vw, 11rem), 100cqi / (var(--chars) * 0.56)); }
-  .hero__summary { color: var(--dim); max-width: 44ch; margin: 1rem 0 1.8rem; font-size: 0.9rem; }
-  .hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
-  .hero { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr); align-items: center; }
+  .hero { padding-block: clamp(1.5rem, 4vw, 3.5rem) clamp(2rem, 5vw, 4rem); }
 
   .marquee {
     overflow: hidden;
@@ -175,6 +122,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
   @keyframes marquee { to { transform: translateX(-50%); } }
 
   .block { margin-top: clamp(4rem, 9vw, 7rem); }
+  .block--log { margin-top: clamp(3rem, 6vw, 5rem); }
 
   .diaries {
     display: grid;
@@ -232,7 +180,6 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
   .roll span { color: var(--red); }
 
   @media (max-width: 52rem) {
-    .hero { grid-template-columns: 1fr; }
     .diaries { grid-template-columns: 1fr; }
     .diaries > :global(:first-child) { grid-row: auto; }
     .work-strip .wrap { grid-template-columns: 1fr; }

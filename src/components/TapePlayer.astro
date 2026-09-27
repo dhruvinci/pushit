@@ -16,8 +16,10 @@ interface Props {
   videos: Video[];
   label: string; // series code shown in the HUD, e.g. "RT"
   compact?: boolean; // player only: no tape list, setlist or theatre (homepage)
+  autoplay?: boolean; // false: poster and a Play button until clicked
+  lazy?: boolean; // lazy-load the poster (players that start hidden)
 }
-const { videos, label, compact = false } = Astro.props;
+const { videos, label, compact = false, autoplay: autoplayProp = true, lazy = false } = Astro.props;
 const first = videos[0];
 const data = videos.map((v) => ({
   id: v.id,
@@ -27,10 +29,10 @@ const data = videos.map((v) => ({
 }));
 ---
 
-<div class="tp" data-tape-player data-videos={JSON.stringify(data)}>
+<div class="tp" data-tape-player data-videos={JSON.stringify(data)} data-autoplay={String(autoplayProp)}>
   <div class="tp__screen">
     <div class="tp__frame"><div class="tp__mount"></div></div>
-    <img class="tp__poster" src={ytThumb(first.id)} alt="" width="1280" height="720" />
+    <img class="tp__poster" src={ytThumb(first.id)} alt="" width="1280" height="720" loading={lazy ? 'lazy' : undefined} />
     <a class="tp__nojs" href={`https://www.youtube.com/watch?v=${first.id}`}>▶ Watch on YouTube</a>
     <div class="tp__hud" aria-hidden="true">
       <span class="tp__state"><i></i><b>{label}</b></span>
@@ -96,29 +98,9 @@ const data = videos.map((v) => ({
 </div>
 
 <script>
-  declare global {
-    interface Window {
-      YT: any;
-      onYouTubeIframeAPIReady?: () => void;
-    }
-  }
+  import { loadYouTube as loadApi, PLAYING, PAUSED, ENDED, BUFFERING } from '../lib/youtube';
+
   type Video = { id: string; title: string; duration: number; chapters: { t: number; label: string }[] };
-
-  const PLAYING = 1, PAUSED = 2, ENDED = 0, BUFFERING = 3;
-
-  let api: Promise<any> | undefined;
-  const loadApi = () =>
-    (api ??= new Promise((resolve) => {
-      if (window.YT?.Player) return resolve(window.YT);
-      const prev = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        prev?.();
-        resolve(window.YT);
-      };
-      const s = document.createElement('script');
-      s.src = 'https://www.youtube.com/iframe_api';
-      document.head.append(s);
-    }));
 
   const fmt = (s: number) => {
     s = Math.max(0, Math.floor(s));
@@ -141,7 +123,7 @@ const data = videos.map((v) => ({
 
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const saveData = (navigator as any).connection?.saveData === true;
-    const autoplay = !reduced && !saveData;
+    const autoplay = root.dataset.autoplay !== 'false' && !reduced && !saveData;
 
     let player: any, current = 0, muted = true, userPaused = false, started = false, visible = true;
     let tick: number | undefined;
@@ -167,6 +149,7 @@ const data = videos.map((v) => ({
     const setMuted = (m: boolean) => {
       muted = m;
       if (player) m ? player.mute() : (player.unMute(), player.setVolume(100));
+      if (!m && started) document.dispatchEvent(new CustomEvent('pushit:play', { detail: root }));
       soundBtn.setAttribute('aria-pressed', String(!m));
       soundBtn.textContent = m ? 'Sound off' : 'Sound on';
       root.classList.toggle('is-muted', m);
@@ -199,6 +182,8 @@ const data = videos.map((v) => ({
       root.classList.toggle('is-paused', s === PAUSED);
       playBtn.textContent = s === PLAYING || s === BUFFERING ? '❚❚' : '▶';
       playBtn.setAttribute('aria-label', s === PLAYING ? 'Pause' : 'Play');
+      // Only one thing plays with sound at a time: tell the others (the homepage TV, other tapes).
+      if (s === PLAYING && !muted) document.dispatchEvent(new CustomEvent('pushit:play', { detail: root }));
       if (s === PLAYING && !started) {
         started = true;
         root.classList.add('is-live');
@@ -362,9 +347,21 @@ const data = videos.map((v) => ({
       { threshold: 0.2 },
     ).observe(screen);
 
+    const pause = () => {
+      if (!player?.getPlayerState) return;
+      const s = player.getPlayerState();
+      if (s === PLAYING || s === BUFFERING) (player.pauseVideo(), (userPaused = true));
+    };
+    document.addEventListener('pushit:play', (e) => (e as CustomEvent).detail !== root && pause());
+    root.addEventListener('tape:pause', pause); // e.g. the homepage tape log hiding this player
+
     drawMarks();
     if (autoplay) create(false);
-    else big.hidden = false;
+    else {
+      big.hidden = false;
+      playBtn.textContent = '▶';
+      playBtn.setAttribute('aria-label', 'Play');
+    }
   }
 </script>
 
