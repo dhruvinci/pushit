@@ -2,10 +2,10 @@
 // Pushit TV, the channel: every YouTube video on the site, shuffled, airing around the clock on the homepage.
 // The schedule (src/lib/schedule.ts) is worked out from the clock, so every visitor sees the same show.
 //
-// It opens as a muted live feed, like a TV left on in a bar. YouTube only counts a view when playback
-// starts from its own play button, so "tap for sound" swaps in YouTube's own player, cued at the live
-// moment; pressing its play button tunes in with sound (and counts). From then on it's a normal YouTube
-// player that we keep on schedule. Without JS: the current show's poster, linking to YouTube.
+// It's a TV, not a player: it opens as a muted live feed, like a set left on in a bar, and the only
+// controls are sound on/off and Watch on YouTube. No pause, no seeking; it stays on schedule.
+// (Autoplayed embeds don't count as YouTube views. That's the trade for staying immersive.)
+// Without JS: the current show's poster, linking to YouTube.
 import { getCollection } from 'astro:content';
 import { getEpisodes, SERIES, ytThumb, clock } from '../lib/episodes';
 import { schedule, type Show } from '../lib/schedule';
@@ -49,10 +49,10 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
         <span class="tv__onair"><i></i>On air</span>
         <span class="tv__clock"></span>
       </div>
-      <button class="tv__tap" type="button" hidden><span>Tap for sound</span></button>
+      <button class="tv__tap" type="button" aria-label="Turn sound on" hidden><span>Tap for sound</span></button>
     </div>
     <p class="tv__status" hidden>
-      <span class="tv__status-text"></span>
+      <button class="tv__sound" type="button" aria-pressed="false">Sound off</button>
       <a class="tv__yt" href={watch(now.show.id)} rel="noopener">Watch on YouTube</a>
     </p>
   </div>
@@ -89,7 +89,6 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
   import { loadYouTube, PLAYING, PAUSED, BUFFERING, CUED } from '../lib/youtube';
   import { schedule, type Show, type Slot } from '../lib/schedule';
 
-  const UNSTARTED = -1;
   const DRIFT = 6; // seconds off schedule before we jump back to the live point
 
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -102,38 +101,43 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
   const hhmmss = (t: number) =>
     new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
-  const thumb = (show: Show) => (document.querySelector('.tv__poster') as HTMLImageElement).src.replace(/[^/]+\.jpg$/, `${show.id}.jpg`);
 
   for (const root of document.querySelectorAll<HTMLElement>('[data-tv]')) setup(root);
 
   function setup(root: HTMLElement) {
     const tv = schedule(JSON.parse(root.dataset.roster!));
     const $ = <T extends Element = HTMLElement>(sel: string) => root.querySelector(sel) as T;
-    const frame = $('.tv__frame'), poster = $<HTMLImageElement>('.tv__poster'), tap = $<HTMLButtonElement>('.tv__tap');
-    const status = $('.tv__status'), statusText = $('.tv__status-text'), yt = $<HTMLAnchorElement>('.tv__yt');
+    const poster = $<HTMLImageElement>('.tv__poster'), tap = $<HTMLButtonElement>('.tv__tap');
+    const status = $('.tv__status'), soundBtn = $<HTMLButtonElement>('.tv__sound'), yt = $<HTMLAnchorElement>('.tv__yt');
     const clockEl = $('.tv__clock'), label = $('.tv__label'), subject = $('.tv__subject'), title = $('.tv__title');
     const bar = $('.tv__progress span'), elapsed = $('.tv__elapsed'), dur = $('.tv__dur');
     const link = $<HTMLAnchorElement>('.tv__link'), nextList = $('.tv__next');
+    const thumb = (show: Show) => poster.src.replace(/[^/]+\.jpg$/, `${show.id}.jpg`);
 
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const saveData = (navigator as any).connection?.saveData === true;
     const now = () => Date.now() / 1000;
 
-    // muted: our own chromeless feed. native: YouTube's player, waiting for (then after) its play button.
-    let mode: 'muted' | 'native' = 'muted';
-    let player: any, loaded = '', state = UNSTARTED, tunedIn = false, userPaused = false, visible = true;
-    let shown = '';
+    let player: any, loaded = '', state = -1, muted = true, visible = true, shown = '';
+    // Off until the browser lets it play: straight away normally; after a tap when autoplay is refused,
+    // or for reduced motion / data saver, where the first tap switches it on with sound.
+    let on = !reduced && !saveData;
 
     root.classList.add('has-js');
     status.hidden = false;
+    tap.hidden = false;
 
-    const setStatus = () => {
-      statusText.textContent =
-        mode === 'muted'
-          ? 'Sound off. Tap the screen to tune in.'
-          : tunedIn
-            ? "Sound on. You're watching live."
-            : 'Press ▶ on the screen to tune in with sound.';
+    const setSound = (sound: boolean) => {
+      muted = !sound;
+      if (player?.mute) {
+        if (sound) (player.unMute(), player.setVolume(100));
+        else player.mute();
+      }
+      soundBtn.setAttribute('aria-pressed', String(sound));
+      soundBtn.textContent = sound ? 'Sound on' : 'Sound off';
+      tap.setAttribute('aria-label', sound ? 'Turn sound off' : 'Turn sound on');
+      root.classList.toggle('is-muted', muted);
+      if (sound) document.dispatchEvent(new CustomEvent('pushit:play', { detail: root }));
     };
 
     // --- the guide: now playing, up next, the clock
@@ -176,21 +180,16 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
       return cur;
     };
 
-    // --- keep the player on schedule
+    // --- keep the picture on schedule
     const sync = (cur: Slot) => {
-      if (!player?.getPlayerState) return;
-      if (mode === 'native' && !tunedIn) {
-        // Waiting on YouTube's play button: keep the right show cued.
-        if (cur.show.id !== loaded) (player.cueVideoById({ videoId: cur.show.id, startSeconds: Math.floor(cur.offset) }), (loaded = cur.show.id));
-        return;
-      }
-      if (userPaused || (mode === 'muted' && !visible)) return;
+      if (!player?.getPlayerState || !on) return;
+      if (muted && !visible) return; // nobody watching or listening: rest
       if (cur.show.id !== loaded) {
         player.loadVideoById({ videoId: cur.show.id, startSeconds: cur.offset });
         loaded = cur.show.id;
       } else if (state === PLAYING) {
         if (Math.abs(player.getCurrentTime() - cur.offset) > DRIFT) player.seekTo(cur.offset, true);
-      } else if (state === PAUSED || state === CUED) {
+      } else if (state === PAUSED || state === CUED || state === -1) {
         player.seekTo(cur.offset, true);
         player.playVideo();
       }
@@ -202,79 +201,66 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
       root.classList.toggle('is-playing', state === PLAYING || state === BUFFERING);
       if (state === PLAYING) {
         root.classList.add('is-on');
-        userPaused = false;
-        if (mode === 'native') {
-          if (!tunedIn) (tunedIn = true), setStatus();
-          document.dispatchEvent(new CustomEvent('pushit:play', { detail: root }));
-        }
-        sync(guide()); // e.g. back from a pause: jump to the live point
+        root.classList.remove('is-off');
+        sync(guide()); // back from a rest: jump to the live point
       }
-      if (state === PAUSED && mode === 'native' && tunedIn) userPaused = true;
     };
 
-    const mount = () => {
-      const el = document.createElement('div');
-      frame.replaceChildren(el);
-      return el;
+    // Autoplay refused (iOS low power mode, browser policy): wait for a tap to switch the set on.
+    const refused = () => {
+      if (root.classList.contains('is-on')) return;
+      on = false;
+      root.classList.add('is-off');
     };
 
-    const tuneMuted = () =>
-      loadYouTube().then((YT) => {
-        if (mode !== 'muted') return; // tapped for sound before the API arrived
-        const cur = guide();
-        loaded = cur.show.id;
-        player = new YT.Player(mount(), {
-          host: 'https://www.youtube-nocookie.com',
-          videoId: cur.show.id,
-          playerVars: {
-            autoplay: 1, mute: 1, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3,
-            playsinline: 1, cc_load_policy: 0, start: Math.floor(cur.offset), origin: location.origin,
+    loadYouTube().then((YT) => {
+      const cur = guide();
+      loaded = cur.show.id;
+      player = new YT.Player($('.tv__mount'), {
+        host: 'https://www.youtube-nocookie.com',
+        videoId: cur.show.id,
+        playerVars: {
+          autoplay: on ? 1 : 0, mute: 1, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3,
+          playsinline: 1, cc_load_policy: 0, start: Math.floor(cur.offset), origin: location.origin,
+        },
+        events: {
+          onReady: () => {
+            if (muted) player.mute();
+            if (on) player.playVideo();
           },
-          events: {
-            onReady: () => (player.mute(), player.playVideo()),
-            onStateChange: onState,
-            onAutoplayBlocked: () => tuneNative(),
-          },
-        });
-        // Autoplay can be refused without the event firing (iOS low power mode): go straight to YouTube's button.
-        setTimeout(() => mode === 'muted' && !root.classList.contains('is-on') && tuneNative(), 5000);
+          onStateChange: onState,
+          onAutoplayBlocked: refused,
+        },
       });
-
-    const tuneNative = () => {
-      if (mode === 'native') return;
-      mode = 'native';
-      player?.destroy?.();
-      player = undefined;
-      tap.hidden = true;
-      root.classList.remove('is-on', 'is-playing');
-      root.classList.add('is-native');
-      setStatus();
-      loadYouTube().then((YT) => {
-        const cur = guide();
-        loaded = cur.show.id;
-        player = new YT.Player(mount(), {
-          host: 'https://www.youtube-nocookie.com',
-          videoId: cur.show.id,
-          playerVars: { autoplay: 0, rel: 0, iv_load_policy: 3, playsinline: 1, start: Math.floor(cur.offset), origin: location.origin },
-          events: {
-            onReady: () => root.classList.add('is-ready'),
-            onStateChange: onState,
-          },
-        });
-      });
-    };
-
-    tap.addEventListener('click', tuneNative);
-
-    // Something else started playing with sound: step aside. A muted feed doesn't compete.
-    document.addEventListener('pushit:play', (e) => {
-      if ((e as CustomEvent).detail === root || mode !== 'native' || !tunedIn) return;
-      if (state === PLAYING || state === BUFFERING) player.pauseVideo();
+      if (on) setTimeout(refused, 5000);
+      else root.classList.add('is-off');
     });
 
-    // The muted feed rests when nobody can see it and picks up the live point on return.
+    // The whole screen is the sound switch. When the set is off, the first tap turns it on, with sound.
+    const toggle = () => {
+      if (!on) {
+        on = true;
+        setSound(true);
+        if (player?.playVideo) {
+          const cur = guide();
+          if (cur.show.id !== loaded) (player.loadVideoById({ videoId: cur.show.id, startSeconds: cur.offset }), (loaded = cur.show.id));
+          else (player.seekTo(cur.offset, true), player.playVideo());
+        }
+        return;
+      }
+      setSound(muted);
+    };
+    tap.addEventListener('click', toggle);
+    soundBtn.addEventListener('click', toggle);
+
+    // Something else started playing with sound: the TV goes quiet but stays on.
+    document.addEventListener('pushit:play', (e) => {
+      if ((e as CustomEvent).detail !== root && !muted) setSound(false);
+    });
+
+    // A muted set rests when nobody can see it and picks up the live point on return.
     const rest = () => {
-      if (mode === 'muted' && !visible && player?.pauseVideo && (state === PLAYING || state === BUFFERING)) player.pauseVideo();
+      if (muted && !visible && player?.pauseVideo && (state === PLAYING || state === BUFFERING)) player.pauseVideo();
     };
     let onScreen = true;
     new IntersectionObserver(
@@ -290,14 +276,9 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
       rest();
     });
 
-    setInterval(() => sync(guide()), 1000);
+    setSound(false);
     guide();
-    if (reduced || saveData) tuneNative();
-    else {
-      tap.hidden = false;
-      setStatus();
-      tuneMuted();
-    }
+    setInterval(() => sync(guide()), 1000);
   }
 </script>
 
@@ -322,8 +303,8 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     inset: 0;
     overflow: hidden;
   }
-  /* The muted feed is cropped like the tape player: twice as tall and centred, so YouTube's title bar
-     and branding sit out of frame. YouTube's own player (native) is shown whole and takes clicks. */
+  /* Cropped like the tape player: twice as tall and centred, so YouTube's title bar and branding sit
+     out of frame. It never takes clicks; the screen is our sound switch. */
   .tv__frame :global(iframe) {
     position: absolute;
     left: 0;
@@ -332,11 +313,6 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     height: 200%;
     border: 0;
     pointer-events: none;
-  }
-  .tv.is-native .tv__frame :global(iframe) {
-    top: 0;
-    height: 100%;
-    pointer-events: auto;
   }
   .tv__poster {
     position: absolute;
@@ -347,8 +323,7 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     transition: opacity 0.6s ease;
     pointer-events: none;
   }
-  .tv.is-on .tv__poster,
-  .tv.is-ready .tv__poster { opacity: 0; }
+  .tv.is-on .tv__poster { opacity: 0; }
   .tv__nojs {
     position: absolute;
     left: 1rem;
@@ -376,7 +351,6 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     pointer-events: none;
     z-index: 2;
   }
-  .tv.is-native .tv__hud { display: none; } /* YouTube's own title bar is up there now */
   .tv__onair { display: inline-flex; align-items: center; gap: 0.45em; }
   .tv__onair i {
     width: 0.62em;
@@ -410,6 +384,8 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     border: 1px solid rgb(236 235 230 / 0.35);
     animation: hint 2.4s ease-in-out infinite;
   }
+  .tv:not(.is-muted) .tv__tap span { display: none; }
+  .tv.is-off .tv__tap span::before { content: '▶ '; }
   .tv__tap:hover span,
   .tv__tap:focus-visible span { background: var(--red); border-color: var(--red); color: var(--bg); animation: none; }
   @keyframes hint { 50% { border-color: var(--red); } }
@@ -428,8 +404,18 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-  .tv__status-text { color: var(--dim); }
-  .tv.is-native:not(.is-playing) .tv__status-text { color: var(--red); }
+  .tv__sound {
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    color: var(--dim);
+  }
+  .tv__sound[aria-pressed='true'],
+  .tv__sound:hover { color: var(--red); }
   .tv__yt { color: var(--dim); text-decoration: none; }
   .tv__yt:hover { color: var(--red); }
 
