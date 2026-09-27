@@ -54,10 +54,15 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
       <!-- full screen only: a control bar that sleeps, and the Up next drawer (right edge, or bottom when tall) -->
       <div class="tv__edge" aria-hidden="true"></div>
       <div class="tv__chrome">
-        <button class="tv__btn tv__sound" type="button" aria-pressed="false">Sound off</button>
+        <button class="tv__btn tv__icon tv__sound" type="button" aria-pressed="false" aria-label="Sound off" title="Sound off">
+          <svg class="tv__sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"></path><path d="M16.5 9.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"></path></svg>
+          <svg class="tv__sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"></path><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
+        </button>
         <span class="tv__chrome-now"></span>
         <button class="tv__btn tv__drawer-btn" type="button" aria-expanded="false">Up next</button>
-        <button class="tv__btn tv__fs-exit" type="button">Exit full screen</button>
+        <button class="tv__btn tv__icon tv__fs-exit" type="button" aria-label="Exit full screen" title="Exit full screen">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 2v5H2M18 7h-5V2M13 18v-5h5M2 13h5v5" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
+        </button>
       </div>
       <aside class="tv__drawer" aria-label="Up next">
         <p class="kicker"><span class="rec">Now playing</span></p>
@@ -67,9 +72,16 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
       </aside>
     </div>
     <p class="tv__status" hidden>
-      <button class="tv__btn tv__sound" type="button" aria-pressed="false">Sound off</button>
-      <button class="tv__btn tv__fs" type="button">Full screen</button>
-      <a class="tv__yt" href={watch(now.show.id)} rel="noopener">Watch on YouTube</a>
+      <button class="tv__btn tv__icon tv__sound" type="button" aria-pressed="false" aria-label="Sound off" title="Sound off">
+          <svg class="tv__sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"></path><path d="M16.5 9.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"></path></svg>
+          <svg class="tv__sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"></path><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
+        </button>
+      <button class="tv__btn tv__icon tv__fs" type="button" aria-label="Full screen" title="Full screen">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 7V2h5M13 2h5v5M18 13v5h-5M7 18H2v-5" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
+      </button>
+      <a class="tv__yt" href={watch(now.show.id)} rel="noopener" aria-label="Watch on YouTube" title="Watch on YouTube">
+        <svg viewBox="0 0 24 17" aria-hidden="true"><rect width="24" height="17" rx="4" fill="currentColor"></rect><path d="M9.6 4.8v7.4l6.2-3.7z" fill="var(--bg-2)"></path></svg>
+      </a>
     </p>
   </div>
 
@@ -158,7 +170,7 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
       }
       for (const b of soundBtns) {
         b.setAttribute('aria-pressed', String(sound));
-        b.textContent = sound ? 'Sound on' : 'Sound off';
+        b.ariaLabel = b.title = sound ? 'Sound on' : 'Sound off';
       }
       tap.setAttribute('aria-label', sound ? 'Turn sound off' : 'Turn sound on');
       root.classList.toggle('is-muted', muted);
@@ -508,7 +520,8 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
   .tv__status {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1.5rem;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
     margin: 0;
     padding: 0.75rem 0.9rem;
     border: 1px solid var(--rule);
@@ -532,8 +545,31 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
   .tv__btn:hover,
   .tv__sound[aria-pressed='true'],
   .tv__drawer-btn[aria-expanded='true'] { color: var(--red); }
-  .tv__fs { margin-right: auto; }
-  .tv__yt { color: var(--dim); text-decoration: none; }
+  .tv__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    margin: -0.6rem 0;
+  }
+  .tv__icon:first-child { margin-left: -0.5rem; }
+  .tv__icon svg { width: 1.25rem; height: 1.25rem; }
+  .tv__fs svg,
+  .tv__fs-exit svg { width: 1.05rem; height: 1.05rem; }
+  .tv__sound-on,
+  .tv__sound[aria-pressed='true'] .tv__sound-off { display: none; }
+  .tv__sound[aria-pressed='true'] .tv__sound-on { display: block; }
+  .tv__yt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    margin: -0.6rem -0.4rem -0.6rem auto;
+    color: var(--dim);
+  }
+  .tv__yt svg { width: 1.35rem; height: auto; }
   .tv__yt:hover { color: var(--red); }
 
   /* guide */
