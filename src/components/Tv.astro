@@ -225,13 +225,13 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     };
 
     // --- what's on, and the controls: up while a mouse is over the screen, or for a few seconds after a
-    // tap or a new show. In full screen they sleep after a few seconds even under the mouse, and a tap on
+    // tap or a new show. In full screen they sleep after 1.5 s even under the mouse, and a tap on
     // the picture only wakes them (or puts them away), like YouTube on a phone.
     let fs = false, sleepTimer: number | undefined;
     const wake = () => {
       screenEl.classList.add('is-awake');
       clearTimeout(sleepTimer);
-      sleepTimer = window.setTimeout(sleep, 3000);
+      sleepTimer = window.setTimeout(sleep, fs ? 1500 : 3000);
     };
     const sleep = () => {
       clearTimeout(sleepTimer);
