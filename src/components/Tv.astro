@@ -421,15 +421,15 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     padding: 1.5rem var(--gutter);
   }
   .tv__tap span {
-    font: 500 0.72rem/1 var(--mono);
+    font: 500 clamp(0.8rem, 1.1vw, 0.95rem)/1 var(--mono);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--fg);
-    padding: 0.8em 1em;
+    padding: 1em 1.3em;
     background: rgb(11 11 10 / 0.75);
     border: 1px solid rgb(236 235 230 / 0.35);
     animation: hint 2.4s ease-in-out infinite;
-    transition: opacity 0.3s;
+    transition: translate 0.3s;
   }
   .tv:not(.is-muted) .tv__tap span { display: none; }
   .tv.is-off .tv__tap span::before { content: '▶ '; }
@@ -449,17 +449,29 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     justify-content: space-between;
     gap: 1.5rem;
     padding: 5rem var(--gutter) 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  /* its shade sits under the Tap for sound hint, so the hint stays bright */
+  .tv__screen::after {
+    content: '';
+    position: absolute;
+    inset: 45% 0 0;
+    z-index: 2;
     background: linear-gradient(transparent, rgb(0 0 0 / 0.85));
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
   }
   .tv__screen.is-awake .tv__chrome,
-  .tv__chrome:focus-within { opacity: 1; }
+  .tv__screen.is-awake::after,
+  .tv__chrome:focus-within,
+  .tv__screen:has(.tv__chrome:focus-within)::after { opacity: 1; }
   .tv__screen.is-awake .tv__controls,
   .tv__chrome:focus-within .tv__controls { pointer-events: auto; }
-  /* the sound button is in the chrome now, so the hint steps aside */
-  .tv__screen.is-awake .tv__tap span { opacity: 0; }
+  /* while the controls are up, the hint (the big target for sound) moves up out of their way */
+  .tv__screen.is-awake .tv__tap span { translate: 0 -3.6rem; }
 
   .tv__now { margin: 0; min-width: 0; text-shadow: 0 1px 4px #000; }
   .tv__now .kicker { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: center; }
