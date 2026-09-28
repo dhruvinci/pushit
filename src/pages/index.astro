@@ -34,7 +34,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
   <section class="wrap block block--log">
     <div class="section-head">
       <h2 class="display display--m">The tape log</h2>
-      <a class="arrow-link" href="/log/">Full log</a>
+      <a class="btn" href="/log/">Full log</a>
     </div>
     <TapeDeck episodes={episodes.slice(0, 12)} />
   </section>
@@ -42,7 +42,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
   <section class="wrap block">
     <div class="section-head">
       <h2 class="display display--m">Scenes from the Scene</h2>
-      <a class="arrow-link" href="/log/#scenes">Every scene</a>
+      <a class="btn" href="/log/#scenes">Every scene</a>
     </div>
     <div class="diaries">
       {diaries.map((ep, i) => <EpisodeCard ep={ep} size={i === 0 ? 'l' : 'm'} />)}
@@ -77,7 +77,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
         <p class="kicker">Mom, I'm on TV</p>
         <h2 class="display display--m">Spotted on Pushit</h2>
       </div>
-      <a class="arrow-link" href="/spotted/">Everyone</a>
+      <a class="btn" href="/spotted/">Everyone</a>
     </div>
     <p class="roll">
       {
