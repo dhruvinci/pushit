@@ -15,19 +15,19 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
 
 <Base>
   <h1 class="sr-only">{SITE.name}: {SITE.tagline}</h1>
-  <div class="wrap hero">
+  <!-- the first screenful: the TV, with the runner along the bottom -->
+  <div class="hero">
     <Tv />
-  </div>
-
-  <div class="marquee" aria-hidden="true">
-    <div class="marquee__track">
-      {
-        Array.from({ length: 4 }).map(() => (
-          <span>
-            {SITE.tagline} <i>✶</i> Checkit. Pushit. <i>✶</i>
-          </span>
-        ))
-      }
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track">
+        {
+          Array.from({ length: 4 }).map(() => (
+            <span>
+              {SITE.tagline} <i>✶</i> Checkit. Pushit. <i>✶</i>
+            </span>
+          ))
+        }
+      </div>
     </div>
   </div>
 
@@ -41,8 +41,8 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
 
   <section class="wrap block">
     <div class="section-head">
-      <h2 class="display display--m">Gig diaries</h2>
-      <a class="arrow-link" href="/log/#scenes">Every diary</a>
+      <h2 class="display display--m">Scenes from the Scene</h2>
+      <a class="arrow-link" href="/log/#scenes">Every scene</a>
     </div>
     <div class="diaries">
       {diaries.map((ep, i) => <EpisodeCard ep={ep} size={i === 0 ? 'l' : 'm'} />)}
@@ -53,11 +53,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
     <div class="wrap">
       <div class="work-strip__head">
         <p class="kicker">Work</p>
-        <h2 class="display display--l">We also make<br />music videos.</h2>
-        <p class="work-strip__copy">
-          For bands we love: Godless, Maneating Orchid and whoever's next. In a band and want a video that feels
-          like this? Talk to us.
-        </p>
+        <h2 class="display display--l">Music videos<br />by Pushit.</h2>
         <a class="btn" href="/work/">See the work</a>
       </div>
       <ul class="work-strip__grid">
@@ -97,7 +93,17 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
 </Base>
 
 <style>
-  .hero { padding-block: clamp(1.5rem, 4vw, 3.5rem) clamp(2rem, 5vw, 4rem); }
+  .hero {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: calc(100svh - var(--header-h));
+    min-height: 22rem;
+  }
+  /* Upright screens: a 4:5 crop of the picture, not a sliver of it */
+  @media (orientation: portrait) {
+    .hero { height: auto; min-height: 0; grid-template-rows: auto auto; }
+    .hero > :global(.tv) { aspect-ratio: 4 / 5; max-height: calc(100svh - var(--header-h) - 5rem); width: 100%; }
+  }
 
   .marquee {
     overflow: hidden;
@@ -142,8 +148,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
     align-items: center;
   }
   .work-strip .kicker { color: var(--red-deep); }
-  .work-strip h2 { margin: 0.6rem 0 1.2rem; }
-  .work-strip__copy { font: 400 1.15rem/1.5 var(--serif); max-width: 36ch; margin: 0 0 1.8rem; }
+  .work-strip h2 { margin: 0.6rem 0 1.8rem; }
   .work-strip .btn { border-color: var(--bg); color: var(--bg); }
   .work-strip .btn:hover { background: var(--bg); color: var(--fg); }
   .work-strip__grid {

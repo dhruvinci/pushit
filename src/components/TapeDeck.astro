@@ -141,9 +141,10 @@ const newest = episodes[0].id;
   .feature__media img { width: 100%; }
   .feature__text { container-type: inline-size; }
   .feature__stamp { margin: 1.2rem 0 0.8rem; font-size: 0.85rem; }
-  /* Anton caps run about 0.5em wide; wide ones (M, W) more, hence the margin */
+  /* No taller than the picture beside it. Anton caps run about 0.5em wide; wide ones (M, W) more,
+     hence the margin. */
   .feature__subject {
-    font-size: min(clamp(3rem, 9vw, 7.5rem), 100cqi / (var(--chars) * 0.56));
+    font-size: min(clamp(2.2rem, 4.2vw, 3.8rem), 100cqi / (var(--chars) * 0.56));
     margin-bottom: 1rem;
     overflow-wrap: anywhere;
   }

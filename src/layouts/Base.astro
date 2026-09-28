@@ -2,9 +2,6 @@
 import '@fontsource/anton/400.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
-import '@fontsource/newsreader/400.css';
-import '@fontsource/newsreader/400-italic.css';
-import '@fontsource/newsreader/600.css';
 import '@fontsource/montserrat/800.css';
 import '../styles/global.css';
 import { SITE } from '../site';
@@ -122,7 +119,7 @@ const nav = [
 
     <footer class="site-footer">
       <div class="wrap">
-        <p class="display display--xl site-footer__sign">Checkit.<br /><span>Pushit.</span></p>
+        <p class="display display--xl site-footer__sign">Pushit.</p>
         <div class="site-footer__row">
           <p class="kicker">{SITE.tagline} <b>All-India Propaganda.</b></p>
           <ul>
@@ -209,7 +206,7 @@ const nav = [
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        min-height: 3.75rem;
+        height: 3.75rem;
       }
       .logo {
         display: block;
@@ -238,7 +235,7 @@ const nav = [
         border-top: 1px solid var(--fg);
         padding-block: clamp(2.5rem, 6vw, 4rem) calc(2rem + env(safe-area-inset-bottom, 0px));
       }
-      .site-footer__sign span { color: var(--red); }
+      .site-footer__sign { color: var(--red); }
       .site-footer__row {
         display: flex;
         flex-wrap: wrap;

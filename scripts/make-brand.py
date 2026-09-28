@@ -32,7 +32,6 @@ def font(name, size):
     paths = {
         "display": FONTS / "anton/files/anton-latin-400-normal.woff2",
         "mono": FONTS / "ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2",
-        "serif": FONTS / "newsreader/files/newsreader-latin-400-italic.woff2",
         "logo": FONTS / "montserrat/files/montserrat-latin-800-normal.woff2",
     }
     return ImageFont.truetype(str(paths[name]), size)
@@ -132,7 +131,7 @@ def card(out, title, kicker, headline=None, stamp=None, image=None):
 
     y = H - pad
     if headline and latin(headline):
-        f = fit(d, headline, "serif", W - 2 * pad, 40, 26)
+        f = fit(d, headline, "mono", W - 2 * pad, 32, 22)
         d.text((pad, y), headline, font=f, fill=FG, anchor="ls")
         y -= 64
     big = fit(d, title.upper(), "display", W - 2 * pad, 150, 64)
