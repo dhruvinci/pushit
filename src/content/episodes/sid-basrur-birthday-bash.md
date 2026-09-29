@@ -11,6 +11,10 @@ cover: Ddsnm3_k_Sg/05
 spotted: [aye, runt, hoirong, raft, oaf-records]
 heroClip: Ddsnm3_k_Sg/02
 instagram: [Ddsnm3_k_Sg]
+youtube:
+  - id: WS6KZrczBQg
+    title: Scenes From The Scene — The Big Bad Bash
+    duration: 344
 ---
 
 Scenes from The Raft. Sid Basrur brings in his birthday in the most punk way possible: a big bad gig for all his favourite people.
