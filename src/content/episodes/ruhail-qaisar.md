@@ -14,6 +14,7 @@ youtube:
   - id: gN0sB-RnWJs
     title: Ruhail Qaisar
     duration: 184
+    published: 2026-05-29
 ---
 
 At the forefront of artists pushing sonic boundaries in India, Ruhail's live shows have been splitting audiences and blurring the line between music and anti-music since he began playing.

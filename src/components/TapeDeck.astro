@@ -1,13 +1,13 @@
 ---
 // The homepage tape log: one tape featured, with a playlist rail of the rest underneath.
-// It opens on the newest tape; picking another from the rail swaps it in (the rail items are plain
+// It opens on the latest upload; picking another from the rail swaps it in (the rail items are plain
 // links to the tapes, so it all still works without JS). Nothing here autoplays: the TV above is on.
 import TapePlayer from './TapePlayer.astro';
 import LoopVideo from './LoopVideo.astro';
 import { SERIES, stamp, runtime, coverSrc, type NumberedEpisode } from '../lib/episodes';
 
 interface Props {
-  episodes: NumberedEpisode[]; // newest first; the first is featured
+  episodes: NumberedEpisode[]; // latest upload first; the first is featured
 }
 const { episodes } = Astro.props;
 const newest = episodes[0].id;
@@ -36,7 +36,7 @@ const newest = episodes[0].id;
               )}
             </div>
             <div class="feature__text">
-              <p class="rec">{ep.id === newest ? 'Newest tape' : 'From the log'} · {ep.tape}</p>
+              <p class="rec">{ep.id === newest ? 'Latest upload' : 'From the log'} · {ep.tape}</p>
               <p class="feature__stamp stamp">
                 {stamp(ep.data.date)} — {SERIES[ep.data.series].label}
               </p>

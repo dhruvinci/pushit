@@ -57,12 +57,20 @@ export function coverSrc(cover: string) {
   return resolveClip(cover).still;
 }
 
-/** All episodes, newest first, each with a tape number (PTV-001 is the oldest). */
+/** When the tape last got something new: its first post or its latest YouTube upload. */
+export const lastUpload = (ep: Episode) =>
+  Math.max(ep.data.published.valueOf(), ...ep.data.youtube.map((v) => v.published.valueOf()));
+
+/** All episodes, latest upload first (ties: most recently filmed first), each with a tape number
+ *  (PTV-001 is the oldest by filming date, so numbers don't follow this order). */
 export async function getEpisodes() {
   const all = await getCollection('episodes');
   const chronological = [...all].sort((a, b) => a.data.date.valueOf() - b.data.date.valueOf());
   const numbers = new Map(chronological.map((ep, i) => [ep.id, `PTV-${String(i + 1).padStart(3, '0')}`]));
-  return chronological.reverse().map((ep) => Object.assign(ep, { tape: numbers.get(ep.id)! }));
+  return chronological
+    .reverse()
+    .sort((a, b) => lastUpload(b) - lastUpload(a))
+    .map((ep) => Object.assign(ep, { tape: numbers.get(ep.id)! }));
 }
 
 export type NumberedEpisode = Awaited<ReturnType<typeof getEpisodes>>[number];

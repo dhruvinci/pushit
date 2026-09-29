@@ -8,7 +8,8 @@ import { resolveClip } from '../../lib/media.mjs';
 import { getEpisodes, SERIES, stamp, longDate, runtime, coverSrc, ytThumb, type NumberedEpisode } from '../../lib/episodes';
 
 export async function getStaticPaths() {
-  const episodes = await getEpisodes();
+  // Older / Newer go by filming date, like the tape numbers (the log itself is by latest upload)
+  const episodes = (await getEpisodes()).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
   return episodes.map((ep, i) => ({
     params: { id: ep.id },
     // newer = previous in the list (it's newest first)

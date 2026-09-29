@@ -14,6 +14,7 @@ youtube:
   - id: VXSDoPMO-OE
     title: Scenes From The Scene — Soundglitz
     duration: 195
+    published: 2026-09-28
 ---
 
 Seven bands played in a venue that could barely hold all the band members combined. Downstairs, Brigade Prince Bar and Restaurant served well as the green room and meet-and-greet area. Fully furnished with a solitary beer-drinking uncle quietly eating his peanuts while watching IPL highlights.

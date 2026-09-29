@@ -12,6 +12,7 @@ youtube:
   - id: J2Bp6U3LjnE
     title: Scenes From The Scene — HRMCOREWRLD
     duration: 1146
+    published: 2026-09-02
 ---
 
 What a day. What a show.

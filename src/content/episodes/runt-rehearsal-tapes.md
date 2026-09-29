@@ -24,9 +24,11 @@ youtube:
   - id: 7Hi5Xw4iXK0
     title: Too Smart + Pay Up, Or Die
     duration: 577
+    published: 2026-09-17
   - id: 7241pPE_hKE
     title: Press to Cancel (feat. Siddharth Nair) + Like Jello, Only Stickier
     duration: 429
+    published: 2026-09-17
 ---
 
 Runt in the rehearsal room, days before their show at The Raft, Koramangala. Four songs: *Press to Cancel*, *Like Jello, Only Stickier*, *Too Smart* and *Pay Up, Or Die* — with Siddharth Nair on vocals.

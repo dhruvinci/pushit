@@ -14,6 +14,7 @@ youtube:
   - id: UJdQh0VzcxY
     title: Intro + Bonda + Glass Jaw
     duration: 514
+    published: 2026-04-27
     chapters:
       - { t: "0:00", label: Intro }
       - { t: "1:19", label: Bonda }
@@ -21,12 +22,14 @@ youtube:
   - id: 2qq_kEgqYyc
     title: XOX + कुता
     duration: 464
+    published: 2026-04-29
     chapters:
       - { t: "0:00", label: XOX }
       - { t: "3:03", label: कुता }
   - id: dPorisNKc1w
     title: Let It Be
     duration: 306
+    published: 2026-05-04
 ---
 
 Spent an evening getting our eardrums blown out at Hoirong's jam room. Six tracks, one room. The last one is Kamal's take on a Beatles classic, *Let It Be*.

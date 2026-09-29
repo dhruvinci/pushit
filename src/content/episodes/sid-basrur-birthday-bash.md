@@ -15,6 +15,7 @@ youtube:
   - id: WS6KZrczBQg
     title: Scenes From The Scene — The Big Bad Bash
     duration: 344
+    published: 2026-09-28
 ---
 
 Scenes from The Raft. Sid Basrur brings in his birthday in the most punk way possible: a big bad gig for all his favourite people.

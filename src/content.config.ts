@@ -8,6 +8,7 @@ const youtube = z.object({
   id: z.string(),
   title: z.string(),
   duration: z.number(), // seconds; required: the homepage TV schedules by it
+  published: z.coerce.date(), // YouTube upload date; a new video brings its tape to the top of the log
   // "mm:ss" or "h:mm:ss" chapter marks, shown as a clickable setlist
   chapters: z.array(z.object({ t: z.string(), label: z.string() })).default([]),
 });
@@ -19,7 +20,7 @@ const episodes = defineCollection({
     title: z.string(), // headline
     series: z.enum(SERIES),
     date: z.coerce.date(), // when it was filmed
-    published: z.coerce.date(),
+    published: z.coerce.date(), // first posted
     city: z.string().optional(),
     venue: z.string().optional(),
     summary: z.string(),

@@ -14,6 +14,7 @@ youtube:
   - id: mFVWUS0-eAE
     title: Scenes From The Scene — Bangalore Death Fest
     duration: 664
+    published: 2026-08-08
     chapters:
       - { t: "0:00", label: Soundcheck }
       - { t: "2:00", label: Trapdoor Terror }

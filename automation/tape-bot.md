@@ -41,7 +41,8 @@ The schema is `src/content.config.ts`.
 - `subject` is the big display name (band, event or person); `title` is the short headline
   ("Live at The Raft"); `summary` is one or two sentences.
 - `youtube:` entries take `id`, `title`, `duration` in seconds (required: the homepage TV schedules by it;
-  convert the scraper's "hh:mm:ss"), and `chapters` (`t` "m:ss" + `label`)
+  convert the scraper's "hh:mm:ss"), `published` (the upload date, required: the log is sorted by each
+  tape's latest upload, so a new video on an old tape brings it back to the top), and `chapters` (`t` "m:ss" + `label`)
   when the description lists a setlist with timestamps.
 - `spotted:` Bands, artists, venues, promoters and labels from `src/data/spotted.json`. Match tagged or
   co-author Instagram handles to the `instagram` field, and names in the text. Add missing bands or venues
@@ -57,7 +58,7 @@ The schema is `src/content.config.ts`.
    `ffmpeg -ss <sec> -i <raw> -frames:v 1 -vf "scale='min(1440,iw)':-2" -q:v 4 -y public/media/ig/<ref>.jpg`
 3. Pick the `cover`: a clear, well-lit, representative still.
 4. **Instagram-only tapes need a `heroClip`.** It's the 10 s loop that plays in the homepage tape log while
-   this is the newest tape. Make frame strips of each video, one frame per 5 s:
+   this tape is the latest upload. Make frame strips of each video, one frame per 5 s:
    `ffmpeg -i <raw> -vf "fps=1/5,scale=240:-2,tile=8x1" -frames:v 1 <out>.jpg`, and look at them.
    Choose the most alive 10 s you can find: the band on stage, good light, crowd in frame, movement.
    Avoid title cards, black frames, burned-in subtitles and blurry transitions. Set `heroClip:

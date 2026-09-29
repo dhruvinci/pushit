@@ -26,7 +26,7 @@ npm run import-media         # rebuild public/media + src/data/media.json (needs
 - `spotted` — `src/data/spotted.json` (bands, artists, venues, promoters, labels).
 - `work` — `src/data/work.json` (music videos; references `spotted` and optionally a `bts` episode).
 
-**Episode helpers** (`src/lib/episodes.ts`): `getEpisodes()` returns episodes newest-first with a derived tape number (`PTV-001` = oldest by filming `date`), so adding an older tape renumbers later ones. Also the `(DD.MM.YY)` date `stamp`, series labels/codes, `runtime`, `coverSrc`.
+**Episode helpers** (`src/lib/episodes.ts`): `getEpisodes()` returns episodes by latest upload (the tape's `published` or any `youtube[].published`, whichever is newest), so a new video on an old tape brings it to the top of the tape log. Each gets a derived tape number (`PTV-001` = oldest by filming `date`), so adding an older tape renumbers later ones. Also the `(DD.MM.YY)` date `stamp`, series labels/codes, `runtime`, `coverSrc`.
 
 **Series list is duplicated** in three places that must stay in sync: `SERIES` in `src/content.config.ts`, `SERIES` metadata in `src/lib/episodes.ts`, and `SERIES` in `scripts/make-brand.py`.
 

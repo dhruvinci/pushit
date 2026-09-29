@@ -12,6 +12,7 @@ youtube:
   - id: 6EjYFGltJhg
     title: A Day Out With Godless
     duration: 173
+    published: 2026-05-06
 ---
 
 *Architect Of Torment* (official music video) — out now.
