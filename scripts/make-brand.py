@@ -2,10 +2,13 @@
 """Generates icons and link-preview (Open Graph) images into public/.
 
 Run after adding an episode or band:  .venv/bin/python scripts/make-brand.py
-Needs Pillow (pip install pillow) and node_modules (for the site's fonts).
+Needs Pillow (pip install pillow) and node_modules (the site's fonts, and sharp to draw the logo).
 """
+import functools
+import io
 import json
 import re
+import subprocess
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
@@ -32,7 +35,6 @@ def font(name, size):
     paths = {
         "display": FONTS / "anton/files/anton-latin-400-normal.woff2",
         "mono": FONTS / "ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2",
-        "logo": FONTS / "montserrat/files/montserrat-latin-800-normal.woff2",
     }
     return ImageFont.truetype(str(paths[name]), size)
 
@@ -54,22 +56,33 @@ def grain(img, amount=18):
     return Image.blend(img, Image.merge("RGB", (noise, noise, noise)), 0.06)
 
 
-def dome(draw, cx, top, r, fg=FG, bg=BG):
-    """CCTV dome with an eye — the Pushit mark. Flat edge at `top`, radius r."""
-    draw.pieslice((cx - r, top - r, cx + r, top + r), 0, 180, fill=fg)
-    ey, k = top + r * 0.46, r / 28  # eye centre, scale from the 64x30 SVG
-    for rad, col, dx in ((8, bg, 0), (5, fg, 0), (3.1, bg, 1.4)):
-        draw.ellipse((cx + dx * k - rad * k, ey + dx * 0.86 * k - rad * k, cx + dx * k + rad * k, ey + dx * 0.86 * k + rad * k), fill=col)
+LOGO_SVG = (ROOT / "scripts/brand/pushit-logo.svg").read_text()
+LOGO_PATHS = re.findall(r'<path class="cls-1" d="([^"]*)"', LOGO_SVG)  # wordmark bar is the last
 
 
-def logo(draw, x, y, size=34):
-    """Boxed PUSHIT.TV wordmark over the dome, top-left at (x, y)."""
-    f = font("logo", size)
-    w = draw.textlength("PUSHIT.TV", font=f)
-    px, py = size * 0.35, size * 0.22
-    draw.rounded_rectangle((x, y, x + w + 2 * px, y + size + 2 * py), radius=size * 0.18, fill=FG)
-    draw.text((x + px, y + py + size * 0.86), "PUSHIT.TV", font=f, fill=BG, anchor="ls")
-    dome(draw, x + px + w / 2, y + size + 2 * py + size * 0.12, size * 1.2)
+def render_svg(svg, width):
+    """Rasterise SVG with sharp (node_modules), since Pillow can't."""
+    js = "let b=[];process.stdin.on('data',c=>b.push(c)).on('end',async()=>process.stdout.write(await require('sharp')(Buffer.concat(b),{density:300}).resize({width:+process.argv[1]}).png().toBuffer()))"
+    out = subprocess.run(["node", "-e", js, str(round(width))], input=svg.encode(), capture_output=True, check=True, cwd=ROOT)
+    return Image.open(io.BytesIO(out.stdout)).convert("RGBA")
+
+
+def mark(paths, view_box, width, color=FG):
+    d = "".join(f'<path d="{p}"/>' for p in paths)
+    hexcol = "#%02x%02x%02x" % color
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{view_box}"><g fill="{hexcol}">{d}</g></svg>'
+    return render_svg(svg, width)
+
+
+@functools.cache
+def full_mark(width):
+    return mark(LOGO_PATHS, "0 33.5 1000 525", width)
+
+
+def logo(img, x, y, width=210):
+    """The full mark (wordmark over the dome), top-left at (x, y)."""
+    m = full_mark(width)
+    img.paste(m, (x, y), m)
 
 
 def rec(draw, x, y, label):
@@ -82,14 +95,13 @@ def rec(draw, x, y, label):
 
 
 def icon(size, padding=0.0):
-    """The dome alone — legible down to 16 px."""
+    """The dome alone, legible down to 16 px."""
     scale = 4  # draw big, downsample for smooth edges
     S = size * scale
     img = Image.new("RGB", (S, S), BG)
-    d = ImageDraw.Draw(img)
-    inner = S * (1 - 2 * padding)
-    r = inner * 0.46
-    dome(d, S / 2, S / 2 - r * 0.5, r)
+    w = round(S * (1 - 2 * padding) * 0.86)
+    dome = mark(LOGO_PATHS[:2], "132 210 736 349", w)
+    img.paste(dome, ((S - dome.width) // 2, (S - dome.height) // 2), dome)
     return img.resize((size, size), Image.LANCZOS)
 
 
@@ -124,7 +136,7 @@ def card(out, title, kicker, headline=None, stamp=None, image=None):
     img = backdrop(image) if image else Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
     pad = 64
-    logo(d, pad, 44)
+    logo(img, pad, 44)
     if stamp:
         f = font("mono", 26)
         d.text((W - pad, 58), stamp, font=f, fill=RED, anchor="ra")
@@ -163,10 +175,10 @@ def make_og():
     og = PUBLIC / "og"
     hero = PUBLIC / "media/ig/DaVcpQwj-3d/07.jpg"  # Incantation, Bangalore Death Fest
     card(og / "default.jpg", "Scenes from the Scene.", "Pushit TV", image=hero)
-    card(og / "log.jpg", "The tape log", "Archive", "Every rehearsal tape, scene diary and portrait.", image=PUBLIC / "media/ig/DYfEd_pjyA5/03.jpg")
+    card(og / "log.jpg", "All videos", "Archive", "Every rehearsal tape, scene diary and portrait.", image=PUBLIC / "media/ig/DYfEd_pjyA5/03.jpg")
     card(og / "spotted.jpg", "Spotted", "Mom, I'm on TV", "Everyone who's been caught on a Pushit tape.", image=PUBLIC / "media/ig/DYT8l99DolN/05.jpg")
     card(og / "work.jpg", "We make music videos", "Commissions open", "Godless. Maneating Orchid. Whoever's next.", image=PUBLIC / "media/yt/pnaWZvTfwAM.jpg")
-    card(og / "about.jpg", "About Pushit TV", "About", "Scenes from the Scene.", image=PUBLIC / "media/ig/DXn00PVD-no/00.jpg")
+    card(og / "about.jpg", "About Pushit TV", "About", "Recorded evidence of India's underground music community.", image=PUBLIC / "media/ig/DXn00PVD-no/00.jpg")
 
     for md in sorted((ROOT / "src/content/episodes").glob("*.md")):
         fm = frontmatter(md)

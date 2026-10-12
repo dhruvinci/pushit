@@ -1,5 +1,6 @@
 ---
-// Pushit TV, the channel: every YouTube video on the site, shuffled, airing around the clock on the homepage.
+// Pushit TV, the channel: Josh's "Landing Page Loop" YouTube playlist, shuffled, airing around the clock
+// on the homepage. The playlist lives in src/data/tv.json, synced daily by automation/check-new.mjs.
 // The schedule (src/lib/schedule.ts) is worked out from the clock, so every visitor sees the same show.
 //
 // It's a TV, not a player: it opens as a muted live feed, like a set left on in a bar, and the only
@@ -9,34 +10,26 @@
 import { getCollection } from 'astro:content';
 import { getEpisodes, SERIES, ytThumb } from '../lib/episodes';
 import { schedule, type Show } from '../lib/schedule';
+import playlist from '../data/tv.json';
 
-const episodes = await getEpisodes();
+// What each video is, where the site knows: a tape's video, or a music video on /work.
+const known = new Map<string, Omit<Show, 'id' | 'duration'>>();
+for (const ep of await getEpisodes())
+  for (const v of ep.data.youtube)
+    known.set(v.id, { subject: ep.data.subject, title: v.title, label: SERIES[ep.data.series].label, href: `/tapes/${ep.id}/`, tape: ep.tape });
 const artists = new Map((await getCollection('spotted')).map((s) => [s.id, s.data.name]));
-const roster: Show[] = [
-  ...episodes.flatMap((ep) =>
-    ep.data.youtube.map((v) => ({
-      id: v.id,
-      duration: v.duration,
-      subject: ep.data.subject,
-      title: v.title,
-      label: SERIES[ep.data.series].label,
-      href: `/tapes/${ep.id}/`,
-      tape: ep.tape,
-    })),
-  ),
-  ...(await getCollection('work')).map((w) => ({
-    id: w.data.youtube,
-    duration: w.data.duration,
-    subject: artists.get(w.data.artist.id) ?? w.data.artist.id,
-    title: w.data.title,
-    label: w.data.kind,
-    href: '/work/',
-  })),
-];
+for (const w of await getCollection('work'))
+  known.set(w.data.youtube, { subject: artists.get(w.data.artist.id) ?? w.data.artist.id, title: w.data.title, label: w.data.kind, href: '/work/' });
+
+const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
+const roster: Show[] = playlist.map((v) => ({
+  id: v.id,
+  duration: v.duration,
+  ...(known.get(v.id) ?? { subject: v.title, title: '', label: 'Pushit TV', href: watch(v.id) }),
+}));
 const tv = schedule(roster);
 // What's on at build time: only seen without JS, which then shows it as a poster.
 const [now] = tv.at(Date.now() / 1000, 1);
-const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 ---
 
 <section class="tv" data-tv data-roster={JSON.stringify(roster)} aria-label="Pushit TV, on air">
@@ -309,14 +302,17 @@ const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
     const rest = () => {
       if (muted && !visible && player?.pauseVideo && (state === PLAYING || state === BUFFERING)) player.pauseVideo();
     };
+    // Scrolled mostly past it: the sound goes off at once. (Not in full screen, where it fills the view.)
     let onScreen = true;
     new IntersectionObserver(
       ([entry]) => {
-        onScreen = entry.isIntersecting;
+        const ratio = entry.intersectionRatio;
+        if (ratio < 0.5 && !muted && !fs) setSound(false);
+        onScreen = ratio >= 0.2;
         visible = onScreen && !document.hidden;
         rest();
       },
-      { threshold: 0.2 },
+      { threshold: [0, 0.2, 0.5] },
     ).observe(screenEl);
     document.addEventListener('visibilitychange', () => {
       visible = onScreen && !document.hidden;

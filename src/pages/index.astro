@@ -10,6 +10,8 @@ import { SITE } from '../site';
 const episodes = await getEpisodes();
 const diaries = episodes.filter((ep) => ep.data.series === 'scenes' || ep.data.series === 'specials').slice(0, 3);
 const work = await getCollection('work');
+// The red runner under the TV
+const RUNNER = ['Attend the gig.', 'Buy the merch.', 'Wear the t-shirt.', 'Play the music.', 'Make the culture.'];
 const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === 'band' || s.data.kind === 'artist');
 ---
 
@@ -23,7 +25,11 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
         {
           Array.from({ length: 4 }).map(() => (
             <span>
-              {SITE.tagline} <i>✶</i> Pushit. <i>✶</i>
+              {RUNNER.map((line) => (
+                <>
+                  {line} <i>✶</i>{' '}
+                </>
+              ))}
             </span>
           ))
         }
@@ -33,8 +39,8 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
 
   <section class="wrap block block--log">
     <div class="section-head">
-      <h2 class="display display--m">The tape log</h2>
-      <a class="btn" href="/log/">Full log</a>
+      <h2 class="display display--m">All videos</h2>
+      <a class="btn" href="/log/">See them all</a>
     </div>
     <TapeDeck episodes={episodes.slice(0, 12)} />
   </section>
@@ -114,7 +120,7 @@ const spotted = (await getCollection('spotted')).filter((s) => s.data.kind === '
   }
   .marquee__track {
     display: inline-flex;
-    animation: marquee 38s linear infinite;
+    animation: marquee 100s linear infinite;
   }
   .marquee span {
     font: 400 clamp(1.6rem, 3.5vw, 2.6rem) / 1 var(--display);

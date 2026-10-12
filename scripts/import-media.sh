@@ -65,10 +65,11 @@ for f in "$OUT"/loops/*/*.mp4; do
   [ -f "$f" ] && { [ -f "${f%.mp4}.jpg" ] || ff -i "$f" -frames:v 1 -q:v 4 "${f%.mp4}.jpg"; }
 done
 
-# 3. YouTube posters: every video on a tape, plus the music videos Pushit shot (listed on /work)
+# 3. YouTube posters: every video on a tape, the music videos Pushit shot (listed on /work) and the TV playlist
 yt_ids() {
   sed -n 's/^[[:space:]]*- id:[[:space:]]*\([A-Za-z0-9_-]\{11\}\).*/\1/p' src/content/episodes/*.md
   jq -r '.[].youtube' src/data/work.json
+  jq -r '.[].id' src/data/tv.json
 }
 for id in $(yt_ids | sort -u); do
   [ -f "$OUT/yt/$id.jpg" ] && continue

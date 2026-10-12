@@ -2,7 +2,6 @@
 import { getCollection, getEntry } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import YouTube from '../components/YouTube.astro';
-import { SITE } from '../site';
 
 const work = await Promise.all(
   (await getCollection('work')).map(async (w) => ({
@@ -15,7 +14,7 @@ const work = await Promise.all(
 <Base
   title="Work"
   image="/og/work.jpg"
-  description="Music videos Pushit TV has made with Godless, Maneating Orchid and more. Bands — get filmed."
+  description="Music videos Pushit TV has made with Godless, Maneating Orchid and more."
 >
   <section class="wrap page-head">
     <p class="rec">Commissions open</p>
@@ -65,58 +64,19 @@ const work = await Promise.all(
   <section class="contact" id="contact">
     <div class="wrap contact__inner">
       <div>
-        <p class="kicker">Get filmed</p>
-        <h2 class="display display--l">In a band?<br />Playing a show?</h2>
+        <p class="kicker">Like what we're doing?</p>
+        <h2 class="display display--l">Want to<br />pitch in?</h2>
       </div>
       <div class="contact__body">
         <p>
-          Music videos, rehearsal tapes, live sets, or just a camera at your gig. Tell us who you are, what you
-          sound like and when you're playing.
+          Pushit is a community driven initiative. If you think you can contribute to this project in any way, shape or
+          form, feel free to DM us on Instagram.
         </p>
-        {
-          SITE.email ? (
-            <form class="enquiry" data-email={SITE.email}>
-              <label>
-                Band / artist
-                <input name="band" required autocomplete="organization" />
-              </label>
-              <label>
-                What do you need?
-                <select name="what">
-                  <option>Music video</option>
-                  <option>Rehearsal tape</option>
-                  <option>Live set / gig coverage</option>
-                  <option>Something else</option>
-                </select>
-              </label>
-              <label>
-                Links & dates
-                <textarea name="message" rows="4" placeholder="Bandcamp, Instagram, show dates…" />
-              </label>
-              <button class="btn btn--red" type="submit">Write to us</button>
-              <p class="enquiry__hint">Opens your email app with this filled in.</p>
-            </form>
-          ) : (
-            <a class="btn btn--red" href="https://ig.me/m/pushit.tv" rel="noopener">
-              DM us on Instagram ↗
-            </a>
-          )
-        }
+        <a class="btn btn--red" href="https://ig.me/m/pushit.tv" rel="noopener">DM us on Instagram ↗</a>
       </div>
     </div>
   </section>
 </Base>
-
-<script>
-  const form = document.querySelector<HTMLFormElement>('.enquiry');
-  form?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const d = new FormData(form);
-    const subject = `${d.get('what')} — ${d.get('band')}`;
-    const body = `Band / artist: ${d.get('band')}\nLooking for: ${d.get('what')}\n\n${d.get('message')}`;
-    location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  });
-</script>
 
 <style>
   .page-head { padding-block: clamp(2rem, 6vw, 4.5rem) clamp(2rem, 5vw, 3.5rem); }
@@ -155,11 +115,6 @@ const work = await Promise.all(
   .contact__body > p { font: 400 1rem/1.6 var(--mono); margin: 0 0 1.8rem; max-width: 36ch; }
   .contact .btn--red { background: var(--bg); border-color: var(--bg); color: var(--fg); }
   .contact .btn--red:hover { background: var(--fg); border-color: var(--fg); color: var(--bg); }
-  .enquiry { display: grid; gap: 1rem; max-width: 30rem; }
-  .enquiry label { display: grid; gap: 0.4rem; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
-  .enquiry input,
-  .enquiry select,
-  .enquiry textarea {
     font: 400 1rem/1.4 var(--mono);
     padding: 0.75rem;
     background: var(--bg);
@@ -168,8 +123,6 @@ const work = await Promise.all(
     text-transform: none;
     letter-spacing: 0;
   }
-  .enquiry button { justify-self: start; }
-  .enquiry__hint { font-size: 0.72rem; margin: 0; }
 
   @media (max-width: 52rem) {
     .work__item,

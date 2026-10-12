@@ -1,5 +1,5 @@
 ---
-subject: Sid Basrur's Birthday Bash
+subject: The Big Bad Bash (Oaf+Runt)
 title: Live at The Raft
 series: scenes
 date: 2026-09-18
@@ -10,12 +10,16 @@ summary: Sid Basrur brings in his birthday in the most punk way possible. Aye! p
 cover: Ddsnm3_k_Sg/05
 spotted: [aye, runt, hoirong, raft, oaf-records]
 heroClip: Ddsnm3_k_Sg/02
-instagram: [Ddsnm3_k_Sg]
+instagram: [Ddsnm3_k_Sg, DeGv4iLkxLR]
 youtube:
   - id: WS6KZrczBQg
     title: Scenes From The Scene — The Big Bad Bash
     duration: 344
     published: 2026-09-28
+  - id: SUqk1GzdmkA
+    title: Hoirong — Fancy Dress + Hindi = Awesome + XOX
+    duration: 381
+    published: 2026-10-05
 ---
 
 Scenes from The Raft. Sid Basrur brings in his birthday in the most punk way possible: a big bad gig for all his favourite people.
@@ -37,3 +41,15 @@ Aye! debuted with their first ever live performance, Runt with their second, and
 ::clip Ddsnm3_k_Sg/06
 
 Hope gigs like this continue to happen. Sometimes the small shows with just your friends and loved ones are the ones that really stay with you. Thanks to Clara for the tats, Sid Nair for putting the whole thing together (it was also incredible watching him on stage after decades), and of course Sid Basrur for throwing a sick party. Happy birthday once again, man!
+
+Hoirong's set from the night, in full: *Fancy Dress + Hindi = Awesome + XOX*.
+
+::clip DeGv4iLkxLR/00
+
+::clip DeGv4iLkxLR/01
+
+::clip DeGv4iLkxLR/02
+
+::clip DeGv4iLkxLR/03
+
+Hoirong's set: cameras by Arun Roy, Dhruva Chakravarthi and Joshua Quadros. Edit by Joshua Quadros. Live mix by Mrinal M (Stained Class).

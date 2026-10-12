@@ -2,7 +2,6 @@
 import '@fontsource/anton/400.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
-import '@fontsource/montserrat/800.css';
 import '../styles/global.css';
 import { SITE } from '../site';
 import Logo from '../components/Logo.astro';
@@ -44,7 +43,7 @@ const org = {
 };
 const schema = [org, ...jsonLd];
 const nav = [
-  { href: '/log/', label: 'Tapes' },
+  { href: '/log/', label: 'Videos' },
   { href: '/spotted/', label: 'Spotted' },
   { href: '/work/', label: 'Work' },
   { href: '/about/', label: 'About' },
@@ -125,7 +124,7 @@ const nav = [
           <ul>
             <li><a href={SITE.instagram} rel="me noopener">Instagram</a></li>
             <li><a href={SITE.youtube} rel="me noopener">YouTube</a></li>
-            <li><a href="/work/#contact">Get filmed</a></li>
+            <li><a href="/work/#contact">Pitch in</a></li>
           </ul>
         </div>
       </div>
@@ -213,7 +212,7 @@ const nav = [
         padding-block: 0.55rem 0.35rem;
         text-decoration: none;
       }
-      .logo:hover :global(.logo-mark__word) { background: var(--red); }
+      .logo:hover :global(.logo-mark) { color: var(--red); }
       nav ul {
         display: flex;
         gap: clamp(0.9rem, 2.5vw, 2rem);
@@ -258,7 +257,7 @@ const nav = [
       .site-footer a { text-decoration: none; }
 
       @media (max-width: 30rem) {
-        .logo { font-size: 0.85rem; }
+        .logo :global(.logo-mark) { height: 2.3rem; }
         nav ul { gap: 0.8rem; }
         nav a { font-size: 0.68rem; letter-spacing: 0.08em; }
       }

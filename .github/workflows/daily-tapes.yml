@@ -1,5 +1,7 @@
 # Every day at noon IST: look for new Pushit posts on Instagram and YouTube, and if there are any, have
 # Claude put them on the site (automation/tape-bot.md), build, and push to main so Vercel deploys.
+# The same check syncs the homepage TV with the Landing Page Loop playlist (src/data/tv.json); a playlist
+# change alone is committed too, without Claude.
 # Needs repo secrets APIFY_TOKEN and CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`). Run it by hand from the Actions tab any time.
 name: Daily tapes
 
@@ -35,11 +37,13 @@ jobs:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
 
       - name: Install tools
-        if: steps.check.outputs.found == 'true'
+        if: steps.check.outputs.found == 'true' || steps.check.outputs.tv == 'true'
         run: |
-          sudo apt-get update -q && sudo apt-get install -yq ffmpeg
           npm ci
-          python3 -m venv .venv && .venv/bin/pip install -q pillow
+          if [ "${{ steps.check.outputs.found }}" = true ]; then
+            sudo apt-get update -q && sudo apt-get install -yq ffmpeg
+            python3 -m venv .venv && .venv/bin/pip install -q pillow
+          fi
 
       - name: Put the new posts on the site
         if: steps.check.outputs.found == 'true'
@@ -55,16 +59,19 @@ jobs:
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep"
 
       - name: Build, commit and push
-        if: steps.check.outputs.found == 'true'
+        if: steps.check.outputs.found == 'true' || steps.check.outputs.tv == 'true'
         run: |
           npm run build
-          node automation/check-new.mjs --mark-seen
+          if [ "${{ steps.check.outputs.found }}" = true ]; then node automation/check-new.mjs --mark-seen; fi
           git add -A
           if git diff --cached --quiet; then echo "Nothing to commit"; exit 0; fi
           # Commits go out under the site owner's name so Vercel deploys them like any other push.
           git config user.name "0xdhruva"
           git config user.email "0xdhruva@gmail.com"
-          if [ -s research/summary.md ]; then cp research/summary.md "$RUNNER_TEMP/msg"
+          if [ -s research/summary.md ]; then
+            cp research/summary.md "$RUNNER_TEMP/msg"
+            if [ -s research/tv.md ]; then printf '\n%s\n' "$(cat research/tv.md)" >> "$RUNNER_TEMP/msg"; fi
+          elif [ -s research/tv.md ]; then cp research/tv.md "$RUNNER_TEMP/msg"
           else echo "Daily tapes: new posts" > "$RUNNER_TEMP/msg"; fi
           printf '\n\nAutomated by .github/workflows/daily-tapes.yml (run %s)\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n' \
             "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> "$RUNNER_TEMP/msg"

@@ -13,6 +13,8 @@ const site = SITE_URL ?? (VERCEL_ENV === 'preview' && VERCEL_URL ? `https://${VE
 export default defineConfig({
   site,
   trailingSlash: 'always',
+  // Tapes that were folded into another one
+  redirects: { '/tapes/hoirong-live-at-the-raft/': '/tapes/sid-basrur-birthday-bash/' },
   integrations: [sitemap({ filter: (page) => !page.endsWith('/404/') })],
   markdown: {
     processor: unified({ remarkPlugins: [remarkClip] }),

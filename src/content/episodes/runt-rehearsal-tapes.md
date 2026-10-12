@@ -1,11 +1,10 @@
 ---
 subject: Runt
-title: Live at The Raft
+title: Live in the jam room
 series: rehearsal-tapes
 date: 2026-09-09
 published: 2026-09-17
 city: Bangalore
-venue: The Raft
 summary: Runt rehearse four songs ahead of their show at The Raft, with Siddharth Nair on vocals.
 cover: /media/yt/7Hi5Xw4iXK0.jpg
 spotted: [runt, raft, oaf-records, hoirong]

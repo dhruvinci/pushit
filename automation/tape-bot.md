@@ -22,9 +22,13 @@ deploys it. So be careful, and leave the site as you'd want to find it.
   XOX+Kutta" (21 s), and an Instagram reel of people mispronouncing "Pushit TV".
 - **Add to an existing tape** when it's more of the same session: another rehearsal-tapes video from the
   same band and date joins that tape's `youtube:` list (see `runt-rehearsal-tapes.md`, two videos), and an
-  Instagram teaser for a YouTube tape goes into that tape's `instagram:` list.
+  Instagram teaser for a YouTube tape goes into that tape's `instagram:` list. **One gig is one tape:** a
+  band's live set, a gig diary video or more Instagram footage from a gig that already has a tape (same
+  date and venue) joins that tape, with its own `youtube:` entry and its clips and credits as a new
+  section at the end of the text. `sid-basrur-birthday-bash.md` (The Big Bad Bash) holds the gig diary
+  video plus Hoirong's full set from the same night.
 - **A music video Pushit shot** belongs on the Work page (`src/data/work.json`), not in the tapes. Give it a
-  `duration` in seconds too: every YouTube video on the site airs on the homepage TV.
+  `duration` in seconds too.
 - Otherwise **make a new tape**: one Markdown file per event or session.
 
 **Writing a tape.** Copy the shape of the closest existing tape (`oaf-big-gigs.md` and
@@ -39,9 +43,10 @@ The schema is `src/content.config.ts`.
 - `series`: `rehearsal-tapes` (a band's full set in the jam room), `scenes` (gig diaries), `portraits`,
   `bts`, `specials`.
 - `subject` is the big display name (band, event or person); `title` is the short headline
-  ("Live at The Raft"); `summary` is one or two sentences.
-- `youtube:` entries take `id`, `title`, `duration` in seconds (required: the homepage TV schedules by it;
-  convert the scraper's "hh:mm:ss"), `published` (the upload date, required: the log is sorted by each
+  ("Live at The Raft"); `summary` is one or two sentences. A rehearsal tape is "Live in the jam room", never
+  the venue of the show it's rehearsing for, and has no `venue`.
+- `youtube:` entries take `id`, `title`, `duration` in seconds (required, for the tape's runtime; convert
+  the scraper's "hh:mm:ss"), `published` (the upload date, required: the log is sorted by each
   tape's latest upload, so a new video on an old tape brings it back to the top), and `chapters` (`t` "m:ss" + `label`)
   when the description lists a setlist with timestamps.
 - `spotted:` Bands, artists, venues, promoters and labels from `src/data/spotted.json`. Match tagged or
@@ -83,3 +88,9 @@ YouTube-only tapes don't need a `heroClip` (the tape log plays the YouTube video
 
 Only change what these posts need. No redesigns, refactors or unrelated fixes; if you notice something
 broken, mention it in the summary.
+
+## The homepage TV isn't yours
+
+The TV airs Josh's "Landing Page Loop" YouTube playlist, which `automation/check-new.mjs` syncs into
+`src/data/tv.json` before you start. Don't edit `tv.json`, and don't try to get a video onto the TV: that's
+Josh's call, made in YouTube.
