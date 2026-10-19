@@ -73,7 +73,8 @@
     "DeGv4iLkxLR/00": { "w": 1280, "h": 720, "video": true },
     "DeGv4iLkxLR/01": { "w": 1280, "h": 720, "video": true },
     "DeGv4iLkxLR/02": { "w": 1280, "h": 720, "video": true },
-    "DeGv4iLkxLR/03": { "w": 1280, "h": 720, "video": true }
+    "DeGv4iLkxLR/03": { "w": 1280, "h": 720, "video": true },
+    "DerWmDcPQ6Z/00": { "w": 720, "h": 1280, "video": true }
   }, "loops": {
 
     "DYg5deLPj9O/00": { "w": 640, "h": 480, "audio": true },

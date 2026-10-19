@@ -12,7 +12,7 @@
   { "id": "simple-man-radio", "name": "Simple Man Radio", "kind": "band", "instagram": "simplemanradiomusic" },
   { "id": "whispers", "name": "Whispers", "kind": "band", "city": "Bangkok" },
   { "id": "strangle", "name": "Strangle", "kind": "band", "city": "Delhi" },
-  { "id": "catatonic", "name": "Catatonic", "kind": "band" },
+  { "id": "catatonic", "name": "Catatonic", "kind": "band", "city": "Shillong", "genre": "Hardcore", "instagram": "catatonic.india" },
   { "id": "chargesheet", "name": "Chargesheet", "kind": "band", "genre": "Nu-metal" },
   { "id": "tryst", "name": "Tryst", "kind": "band", "city": "Pune", "genre": "Hardcore" },
   { "id": "dimorphous-expression", "name": "Dimorphous Expression", "kind": "band", "city": "Bangalore", "genre": "Melodic death metal", "instagram": "dimorphousexpression" },
