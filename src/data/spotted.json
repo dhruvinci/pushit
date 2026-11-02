@@ -28,6 +28,7 @@
   { "id": "barleyrasa", "name": "Barleyrasa", "kind": "band", "instagram": "barleyrasa" },
   { "id": "scyren", "name": "Scyren", "kind": "band", "instagram": "scyren.official" },
   { "id": "aye", "name": "Aye!", "kind": "band" },
+  { "id": "kryptos", "name": "Kryptos", "kind": "band", "city": "Bangalore", "instagram": "kryptosindia" },
 
   { "id": "the-humming-tree", "name": "The Humming Tree", "kind": "venue", "city": "Bangalore", "instagram": "the_hummingtree" },
   { "id": "raft", "name": "The Raft", "kind": "venue", "city": "Bangalore", "instagram": "theraftbangalore" },
@@ -38,5 +39,6 @@
   { "id": "oaf-records", "name": "Oaf Records", "kind": "label", "instagram": "oafrecords" },
   { "id": "extreme-underground", "name": "Extreme Underground", "kind": "promoter", "instagram": "extremeundergroundindia" },
   { "id": "haramcore", "name": "Haramcore", "kind": "promoter", "city": "Mumbai" },
-  { "id": "phantom-pulse", "name": "Phantom Pulse", "kind": "promoter", "city": "Bangalore", "instagram": "phantompulse.live" }
+  { "id": "phantom-pulse", "name": "Phantom Pulse", "kind": "promoter", "city": "Bangalore", "instagram": "phantompulse.live" },
+  { "id": "spectral-decay", "name": "Spectral Decay", "kind": "promoter" }
 ]
